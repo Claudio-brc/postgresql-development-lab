@@ -51,3 +51,14 @@ VALUES
 (6,600.00,'BANK_TRANSFER','PAID'),
 (8,150.00,'CREDIT_CARD','PAID'),
 (9,800.00,'BANK_TRANSFER','PAID');
+
+INSERT INTO app_settings
+(setting_key, setting_value, description)
+VALUES
+('weekly_discount_percent', '10', 'Discount applied to weekly stays'),
+
+('weekly_discount_nights', '7', 'Minimum nights to apply weekly discount'),
+
+('max_pending_reservations', '3', 'Maximum pending reservations per guest'),
+
+('max_stay_nights', '30', 'Maximum allowed stay');

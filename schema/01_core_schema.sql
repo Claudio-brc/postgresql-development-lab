@@ -97,3 +97,13 @@ CREATE TABLE payments (
         FOREIGN KEY (reservation_id)
         REFERENCES reservations(reservation_id)
 );
+
+CREATE TABLE app_settings (
+
+    setting_key     VARCHAR(100) PRIMARY KEY,
+
+    setting_value   VARCHAR(255) NOT NULL,
+
+    description     VARCHAR(255)
+
+);
