@@ -31,10 +31,10 @@ BEGIN
     WHERE r.guest_id = p_guest_id
     LOOP
       reservation_id := rec.reservation_id;
-	  property_name  := rec.property_name;
-	  check_in       := rec.check_in_date;
-	  check_out      := rec.check_out_date;
-	  status         := rec.status;
+	    property_name  := rec.property_name;
+	    check_in       := rec.check_in_date;
+	    check_out      := rec.check_out_date;
+	    status         := rec.status;
 
       RETURN NEXT;
     END LOOP; 

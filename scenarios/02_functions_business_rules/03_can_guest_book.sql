@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.can_guest_book(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
-    v_guest_exists BIGINT;
+  v_guest_exists BIGINT;
 	v_reservation_count INT;
 	v_max_pending INTEGER;
 
