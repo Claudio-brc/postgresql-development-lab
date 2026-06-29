@@ -107,3 +107,41 @@ CREATE TABLE app_settings (
     description     VARCHAR(255)
 
 );
+
+CREATE TABLE discounts (
+
+    discount_id         BIGSERIAL PRIMARY KEY,
+
+    discount_name       VARCHAR(100) NOT NULL,
+
+    discount_type       VARCHAR(20) NOT NULL
+                        CHECK (
+                            discount_type IN (
+                                'STAY_LENGTH',
+                                'DATE_RANGE'
+                            )
+                        ),
+
+    discount_percent    NUMERIC(5,2) NOT NULL
+                        CHECK (
+                            discount_percent > 0
+                            AND discount_percent <= 100
+                        ),
+
+    minimum_nights      INTEGER
+                        CHECK (minimum_nights > 0),
+
+    valid_from          DATE,
+
+    valid_to            DATE,
+
+    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+
+    CONSTRAINT chk_discount_dates
+    CHECK (
+        valid_from IS NULL
+        OR valid_to IS NULL
+        OR valid_from <= valid_to
+    )
+
+);

@@ -19,7 +19,8 @@ BEGIN
 
   v_total_base := calculate_stay_cost(p_property_id, p_check_in, p_check_out);
 
-  RETURN calculate_weekly_discount(v_total_base, p_check_out - p_check_in);
+  RETURN calculate_booking_discount(v_total_base, p_check_out - p_check_in, p_check_in);
+
 
 END;
 $BODY$;

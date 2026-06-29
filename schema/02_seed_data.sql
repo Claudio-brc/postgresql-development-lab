@@ -62,3 +62,50 @@ VALUES
 ('max_pending_reservations', '3', 'Maximum pending reservations per guest'),
 
 ('max_stay_nights', '30', 'Maximum allowed stay');
+
+INSERT INTO discounts
+(
+    discount_name,
+    discount_type,
+    discount_percent,
+    minimum_nights
+)
+VALUES
+(
+    'Weekly Discount',
+    'STAY_LENGTH',
+    10,
+    7
+);
+
+INSERT INTO discounts
+(
+    discount_name,
+    discount_type,
+    discount_percent,
+    minimum_nights
+)
+VALUES
+(
+    'Monthly Discount',
+    'STAY_LENGTH',
+    20,
+    30
+);
+
+INSERT INTO discounts
+(
+    discount_name,
+    discount_type,
+    discount_percent,
+    valid_from,
+    valid_to
+)
+VALUES
+(
+    'Low Season',
+    'DATE_RANGE',
+    15,
+    '2026-05-01',
+    '2026-06-30'
+);
