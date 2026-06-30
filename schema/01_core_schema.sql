@@ -145,3 +145,33 @@ CREATE TABLE discounts (
     )
 
 );
+
+ALTER TABLE IF EXISTS public.discounts
+    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE IF EXISTS public.discounts
+    ADD COLUMN updated_at timestamp with time zone;    
+
+ALTER TABLE IF EXISTS public.guests
+    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE IF EXISTS public.guests
+    ADD COLUMN updated_at timestamp with time zone;  
+
+ALTER TABLE IF EXISTS public.properties
+    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE IF EXISTS public.properties
+    ADD COLUMN updated_at timestamp with time zone;   	
+
+ALTER TABLE IF EXISTS public.reservations
+    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE IF EXISTS public.reservations
+    ADD COLUMN updated_at timestamp with time zone;   	
+
+ALTER TABLE IF EXISTS public.payments
+    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE IF EXISTS public.payments
+    ADD COLUMN updated_at timestamp with time zone;   	
