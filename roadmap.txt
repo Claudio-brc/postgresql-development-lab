@@ -1,1 +1,0 @@
-01 - PL/pgSQL Fundamentals02 - Functions & Business Rules03 - Transactions & Consistency04 - Stored Procedures05 - Triggers & Audit Logging06 - JSONB & Advanced Data Modeling07 - Dynamic Pricing & Availability Calendar08 - Advanced Transactions & Concurrency09 - Dynamic SQL10 - Security & Roles11 - Event-Driven Database Patterns
