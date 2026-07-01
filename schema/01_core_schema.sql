@@ -175,3 +175,15 @@ ALTER TABLE IF EXISTS public.payments
 
 ALTER TABLE IF EXISTS public.payments
     ADD COLUMN updated_at timestamp with time zone;   	
+
+CREATE TABLE reservation_status_audit (
+    audit_id BIGSERIAL PRIMARY KEY,
+    reservation_id BIGINT NOT NULL,
+    old_status VARCHAR(20),
+    new_status VARCHAR(20),
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE reservation_status_audit 
+ADD CONSTRAINT fk_reservation_audit_reservation 
+FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id);
