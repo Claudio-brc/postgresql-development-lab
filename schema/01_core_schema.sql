@@ -187,3 +187,11 @@ CREATE TABLE reservation_status_audit (
 ALTER TABLE reservation_status_audit 
 ADD CONSTRAINT fk_reservation_audit_reservation 
 FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id);
+
+CREATE TABLE error_log (
+    error_id BIGSERIAL PRIMARY KEY,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sql_state VARCHAR(10),
+    error_message TEXT,
+    function_name VARCHAR(100)
+);
