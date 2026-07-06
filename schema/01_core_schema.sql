@@ -195,3 +195,37 @@ CREATE TABLE error_log (
     error_message TEXT,
     function_name VARCHAR(100)
 );
+
+CREATE TABLE services
+(
+    service_id BIGSERIAL PRIMARY KEY,
+    service_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price NUMERIC(10,2) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE reservation_services
+(
+    reservation_id BIGINT NOT NULL,
+    service_id BIGINT NOT NULL,
+
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(10,2) NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_reservation_services
+        PRIMARY KEY (reservation_id, service_id),
+
+    CONSTRAINT fk_reservation_services_reservation
+        FOREIGN KEY (reservation_id)
+        REFERENCES reservations(reservation_id),
+
+    CONSTRAINT fk_reservation_services_service
+        FOREIGN KEY (service_id)
+        REFERENCES services(service_id)
+);

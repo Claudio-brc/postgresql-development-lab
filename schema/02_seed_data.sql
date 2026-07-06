@@ -109,3 +109,36 @@ VALUES
     '2026-05-01',
     '2026-06-30'
 );
+
+INSERT INTO services
+(
+    service_name,
+    description,
+    price
+)
+VALUES
+(
+    'Breakfast',
+    'Continental breakfast served every morning.',
+    15.00
+),
+(
+    'Airport Transfer',
+    'Private transfer between the airport and the property.',
+    40.00
+),
+(
+    'Late Check-out',
+    'Extended check-out after the standard departure time.',
+    25.00
+),
+(
+    'Pet Fee',
+    'Additional charge for guests traveling with pets.',
+    20.00
+),
+(
+    'Extra Cleaning',
+    'Additional cleaning service during the stay.',
+    30.00
+);
