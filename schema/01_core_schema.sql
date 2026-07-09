@@ -229,3 +229,6 @@ CREATE TABLE reservation_services
         FOREIGN KEY (service_id)
         REFERENCES services(service_id)
 );
+
+ALTER TABLE properties
+ADD COLUMN metadata JSONB;
