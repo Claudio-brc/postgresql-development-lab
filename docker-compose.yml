@@ -15,7 +15,7 @@ services:
       - "5432:5432"
 
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - development_lab_data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  development_lab_data:
