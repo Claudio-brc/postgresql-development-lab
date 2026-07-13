@@ -1,14 +1,22 @@
-DROP TABLE IF EXISTS guests CASCADE;
-DROP TABLE IF EXISTS properties CASCADE;
-DROP TABLE IF EXISTS reservations CASCADE;
+DROP TABLE IF EXISTS reservation_services CASCADE;
+DROP TABLE IF EXISTS services CASCADE;
+DROP TABLE IF EXISTS error_log CASCADE;
+DROP TABLE IF EXISTS reservation_status_audit CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS reservations CASCADE;
+DROP TABLE IF EXISTS properties CASCADE;
+DROP TABLE IF EXISTS guests CASCADE;
+DROP TABLE IF EXISTS discounts CASCADE;
+DROP TABLE IF EXISTS app_settings CASCADE;
 
 
 CREATE TABLE guests (
     guest_id      BIGSERIAL PRIMARY KEY,
     full_name     VARCHAR(100) NOT NULL,
     email         VARCHAR(255) NOT NULL UNIQUE,
-    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMPTZ  
+
 );
 
 CREATE TABLE properties (
@@ -21,7 +29,11 @@ CREATE TABLE properties (
 
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
 
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at      TIMESTAMPTZ,
+
+    metadata        JSONB  
 );
 
 CREATE TABLE reservations (
@@ -51,9 +63,11 @@ CREATE TABLE reservations (
                         DEFAULT 0
                         CHECK (total_amount >= 0),
 
-    created_at          TIMESTAMP
+    created_at          TIMESTAMPTZ
                         NOT NULL
                         DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at          TIMESTAMPTZ,
 
     CONSTRAINT fk_reservations_guests
         FOREIGN KEY (guest_id)
@@ -87,11 +101,14 @@ CREATE TABLE payments (
                                 'PAID',
                                 'REFUNDED'
                             )
-                        ),
-
-    payment_date        TIMESTAMP
+                        ),                    
+    payment_date        TIMESTAMPTZ
                         NOT NULL
                         DEFAULT CURRENT_TIMESTAMP,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at          TIMESTAMPTZ,                         
 
     CONSTRAINT fk_payments_reservations
         FOREIGN KEY (reservation_id)
@@ -137,6 +154,10 @@ CREATE TABLE discounts (
 
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
 
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at          TIMESTAMPTZ,
+
     CONSTRAINT chk_discount_dates
     CHECK (
         valid_from IS NULL
@@ -146,47 +167,17 @@ CREATE TABLE discounts (
 
 );
 
-ALTER TABLE IF EXISTS public.discounts
-    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-
-ALTER TABLE IF EXISTS public.discounts
-    ADD COLUMN updated_at timestamp with time zone;    
-
-ALTER TABLE IF EXISTS public.guests
-    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-
-ALTER TABLE IF EXISTS public.guests
-    ADD COLUMN updated_at timestamp with time zone;  
-
-ALTER TABLE IF EXISTS public.properties
-    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-
-ALTER TABLE IF EXISTS public.properties
-    ADD COLUMN updated_at timestamp with time zone;   	
-
-ALTER TABLE IF EXISTS public.reservations
-    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-
-ALTER TABLE IF EXISTS public.reservations
-    ADD COLUMN updated_at timestamp with time zone;   	
-
-ALTER TABLE IF EXISTS public.payments
-    ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
-
-ALTER TABLE IF EXISTS public.payments
-    ADD COLUMN updated_at timestamp with time zone;   	
-
 CREATE TABLE reservation_status_audit (
     audit_id BIGSERIAL PRIMARY KEY,
     reservation_id BIGINT NOT NULL,
     old_status VARCHAR(20),
     new_status VARCHAR(20),
-    changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_reservation_audit_reservation 
+   FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id)
 );
 
-ALTER TABLE reservation_status_audit 
-ADD CONSTRAINT fk_reservation_audit_reservation 
-FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id);
 
 CREATE TABLE error_log (
     error_id BIGSERIAL PRIMARY KEY,
@@ -205,7 +196,9 @@ CREATE TABLE services
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ,
+
+    CHECK (price >= 0)
 );
 
 CREATE TABLE reservation_services
@@ -230,5 +223,3 @@ CREATE TABLE reservation_services
         REFERENCES services(service_id)
 );
 
-ALTER TABLE properties
-ADD COLUMN metadata JSONB;

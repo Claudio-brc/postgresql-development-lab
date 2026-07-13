@@ -1,8 +1,14 @@
+DROP TYPE IF EXISTS property_request CASCADE;
+
+DROP TYPE IF EXISTS reservation_summary CASCADE;
+
+DROP TYPE IF EXISTS service_summary CASCADE;
+
+
 CREATE TYPE property_request AS (
     property_name VARCHAR(150),
     nightly_rate NUMERIC,
-    is_active BOOLEAN,
-    created_at TIMESTAMPTZ
+    is_active BOOLEAN
 );
 
 CREATE TYPE reservation_summary AS
