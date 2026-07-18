@@ -336,11 +336,11 @@ BEGIN
 
   INSERT INTO public.payments(
 	 reservation_id, payment_amount, payment_method, status, payment_date)
-	VALUES ( v_reservation_id, p_payment_amount, p_payment_method,'COMPLETED', CURRENT_DATE);
+	VALUES ( v_reservation_id, p_payment_amount, p_payment_method,'PAID', CURRENT_DATE);
 
 	
   UPDATE RESERVATIONS R
-     SET R.status = 'CONFIRMED' 
+     SET status = 'CONFIRMED' 
 	WHERE R.reservation_id = v_reservation_id;
 
 
