@@ -144,3 +144,20 @@ SELECT process_booking(
     'CREDIT_CARD'
 );
 
+-- Function: cancel_reservation()
+--
+-- Description:
+--   Cancels an existing reservation by updating its status to CANCELLED.
+--
+-- Parameters:
+--   p_reservation_id BIGINT - Reservation identifier.
+--
+-- Returns:
+--   No value.
+--   Raises an exception if the reservation does not exist or has already been
+--   cancelled.
+--------------------------------------------------------------------------------
+
+SELECT cancel_reservation(
+    18
+);

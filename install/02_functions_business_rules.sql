@@ -339,9 +339,7 @@ BEGIN
 	VALUES ( v_reservation_id, p_payment_amount, p_payment_method,'PAID', CURRENT_DATE);
 
 	
-  UPDATE RESERVATIONS R
-     SET status = 'CONFIRMED' 
-	WHERE R.reservation_id = v_reservation_id;
+  PERFORM confirm_reservation(v_reservation_id);
 
 
   RETURN v_reservation_id;

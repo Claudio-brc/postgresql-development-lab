@@ -66,6 +66,7 @@ BEGIN
       WHERE r.check_in_date < p_check_out_date
         AND r.check_out_date > p_check_in_date   
         AND r.property_id = p_property_id
+        AND r.status IN ('PENDING', 'CONFIRMED')
 	) INTO v_conflict_exists;
 
   return not v_conflict_exists;	
