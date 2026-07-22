@@ -1,3 +1,9 @@
+/*
+==========================================================
+Scenario 03 - Triggers and auditing
+==========================================================
+
+
 The trigger functions in this scenario are executed automatically during
 reservation updates.
 
@@ -8,3 +14,5 @@ To observe their behavior:
   - updated_at is automatically refreshed.
   - Reservation status changes are recorded in reservation_status_audit.
   - Invalid status transitions raise exceptions.
+
+*/

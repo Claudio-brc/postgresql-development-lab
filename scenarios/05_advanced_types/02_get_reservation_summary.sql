@@ -10,24 +10,23 @@ CREATE OR REPLACE FUNCTION public.get_reservation_summary(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
-  v_reservation reservation_summary  ;
+    v_reservation reservation_summary;
 BEGIN
+    v_reservation := (
+        SELECT ROW(
+            r.reservation_id,
+            g.full_name,
+            p.property_name,
+            r.total_amount,
+            r.status
+        )::reservation_summary
+        FROM reservations r
+        JOIN guests g ON r.guest_id = g.guest_id
+        JOIN properties p ON r.property_id = p.property_id
+        WHERE r.reservation_id = p_reservation_id
+    );
 
-    SELECT 
-        (r.reservation_id, g.name, p.name, r.total_amount, r.status)::reservation_summary
-    INTO 
-        v_reservation
-    FROM 
-        reservations r
-    JOIN 
-        guests g ON r.guest_id = g.guest_id
-    JOIN 
-        properties p ON r.property_id = p.property_id
-    WHERE 
-        r.reservation_id = p_reservation_id;
-
-	RETURN v_reservation;	
-
+  RETURN v_reservation;	
 END;
 $BODY$;
 
