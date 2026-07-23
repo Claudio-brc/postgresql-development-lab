@@ -1,24 +1,3 @@
-SELECT jsonb_set(
-    '{"amenities":{"wifi":true,"parking":false}}'::jsonb,
-    '{amenities,parking}',
-    'true'::jsonb
-);
-
-
-/*
-
-result:
-
-{
-  "amenities": {
-    "wifi": true,
-    "parking": true
-  }
-}
-
-
-*/
-
 -- This example assumes the metadata document has already been initialized.
 
 CREATE OR REPLACE FUNCTION update_property_parking(

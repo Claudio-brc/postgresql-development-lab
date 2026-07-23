@@ -39,3 +39,32 @@ SELECT create_property(
 SELECT get_reservation_summary(
     1
 );
+
+--------------------------------------------------------------------------------
+-- Function: add_services_to_reservation()
+--
+-- Description:
+--   Replaces the services associated with a reservation using the provided
+--   array of service IDs.
+--
+-- Parameters:
+--   p_reservation_id BIGINT   - Reservation identifier.
+--   p_service_ids BIGINT[]    - Array of service identifiers to associate with
+--                               the reservation.
+--
+-- Returns:
+--   No value.
+--   Raises an exception if the reservation or any specified service does not
+--   exist.
+--------------------------------------------------------------------------------
+
+SELECT add_services_to_reservation(
+    1,
+    ARRAY[1, 2, 3]
+);
+
+
+
+
+
+

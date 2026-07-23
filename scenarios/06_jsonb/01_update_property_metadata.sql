@@ -31,34 +31,5 @@ $BODY$;
 
 ALTER FUNCTION public.update_property_metadata(bigint, jsonb)
     OWNER TO postgres;
-
-/*
-
-SELECT update_property_metadata(
-    1,
-    '{
-        "amenities": {
-            "wifi": true,
-            "parking": false,
-            "air_conditioning": true,
-            "smart_tv": true
-        },
-        "languages": [
-            "English",
-            "Spanish"
-        ],
-        "check_in": {
-            "from": "15:00",
-            "to": "22:00"
-        },
-        "house_rules": {
-            "pets_allowed": false,
-            "smoking": false
-        }
-    }'::jsonb
-);
-
-
-*/
 	
 
