@@ -1,45 +1,35 @@
--- FUNCTION: public.can_guest_book(bigint)
-
--- DROP FUNCTION IF EXISTS public.can_guest_book(bigint);
-
-CREATE OR REPLACE FUNCTION public.can_guest_book(
-	p_guest_id bigint)
-    RETURNS boolean
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
+CREATE OR REPLACE FUNCTION can_guest_book(
+    p_guest_id BIGINT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
 DECLARE
-  v_guest_exists BIGINT;
-	v_reservation_count INT;
-	v_max_pending INTEGER;
-
+    v_guest_exists       BIGINT;
+    v_reservation_count  INT;
+    v_max_pending        INTEGER;
 BEGIN
-
-  SELECT g.guest_id         
+    SELECT g.guest_id
     INTO v_guest_exists
-    FROM guests as g 
-   WHERE g.guest_id = p_guest_id;
+    FROM guests AS g
+    WHERE g.guest_id = p_guest_id;
 
-  if v_guest_exists is NULL then
-    RAISE EXCEPTION 'Guest not found.';
-  end if; 
+    IF v_guest_exists IS NULL THEN
+        RAISE EXCEPTION 'Guest not found.';
+    END IF;
 
-  Select count(*)
-    INTO  v_reservation_count
-    from reservations r
-	where r.guest_id = p_guest_id
-	  and r.status = 'PENDING';
+    SELECT COUNT(*)
+    INTO v_reservation_count
+    FROM reservations AS r
+    WHERE r.guest_id = p_guest_id
+      AND r.status = 'PENDING';
 
-  v_max_pending := get_setting('max_pending_reservations')::INTEGER;	  
+    v_max_pending := get_setting('max_pending_reservations')::INTEGER;
 
-  if v_max_pending <= v_reservation_count then
-    RAISE EXCEPTION 'Guest has reached the maximum number of pending reservations.';
-  end if;
+    IF v_max_pending <= v_reservation_count THEN
+        RAISE EXCEPTION 'Guest has reached the maximum number of pending reservations.';
+    END IF;
 
-  return true;
+    RETURN TRUE;
 END;
-$BODY$;
-
-ALTER FUNCTION public.can_guest_book(bigint)
-    OWNER TO postgres;
+$$;

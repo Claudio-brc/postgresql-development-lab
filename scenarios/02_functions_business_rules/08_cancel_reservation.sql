@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION public.cancel_reservation(
+CREATE OR REPLACE FUNCTION cancel_reservation(
     p_reservation_id BIGINT
 )
 RETURNS VOID
@@ -7,11 +7,10 @@ AS $$
 DECLARE
     v_status VARCHAR(20);
 BEGIN
-
     SELECT status
-      INTO v_status
-      FROM reservations
-     WHERE reservation_id = p_reservation_id;
+    INTO v_status
+    FROM reservations
+    WHERE reservation_id = p_reservation_id;
 
     IF v_status IS NULL THEN
         RAISE EXCEPTION 'Reservation % not found.', p_reservation_id;
@@ -22,8 +21,7 @@ BEGIN
     END IF;
 
     UPDATE reservations
-       SET status = 'CANCELLED'
-     WHERE reservation_id = p_reservation_id;
-
+    SET status = 'CANCELLED'
+    WHERE reservation_id = p_reservation_id;
 END;
 $$;

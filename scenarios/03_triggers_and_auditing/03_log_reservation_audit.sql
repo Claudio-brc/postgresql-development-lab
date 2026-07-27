@@ -1,13 +1,24 @@
 CREATE OR REPLACE FUNCTION log_reservation_status_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 BEGIN
     IF OLD.status IS DISTINCT FROM NEW.status THEN
-        INSERT INTO reservation_status_audit (reservation_id, old_status, new_status)
-        VALUES (NEW.reservation_id, OLD.status, NEW.status);
+        INSERT INTO reservation_status_audit (
+            reservation_id,
+            old_status,
+            new_status
+        )
+        VALUES (
+            NEW.reservation_id,
+            OLD.status,
+            NEW.status
+        );
     END IF;
+
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE OR REPLACE TRIGGER trg_reservation_audit
 AFTER UPDATE OF status ON reservations

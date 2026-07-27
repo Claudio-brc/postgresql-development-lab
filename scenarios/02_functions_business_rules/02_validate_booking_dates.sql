@@ -1,43 +1,35 @@
--- FUNCTION: public.validate_booking_dates(date, date)
-
--- DROP FUNCTION IF EXISTS public.validate_booking_dates(date, date);
-
-CREATE OR REPLACE FUNCTION public.validate_booking_dates(
-	p_check_in_date date,
-	p_check_out_date date)
-    RETURNS boolean
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
-DECLARE v_max_stay INTEGER;
+CREATE OR REPLACE FUNCTION validate_booking_dates(
+    p_check_in_date  DATE,
+    p_check_out_date DATE
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_max_stay INTEGER;
 BEGIN
+    IF p_check_in_date IS NULL THEN
+        RAISE EXCEPTION 'Check in date can´t be NULL.';
+    END IF;
 
-  if p_check_in_date is null then
-    RAISE EXCEPTION 'Check in date can´t be NULL.';
-  end if;   
+    IF p_check_out_date IS NULL THEN
+        RAISE EXCEPTION 'Check out date can´t be NULL.';
+    END IF;
 
-  if p_check_out_date is null then
-    RAISE EXCEPTION 'Check out date can´t be NULL.';
-  end if;   
+    IF p_check_out_date < p_check_in_date THEN
+        RAISE EXCEPTION 'Check in date can´t be after check out date.';
+    END IF;
 
-  if p_check_out_date < p_check_in_date then
-    RAISE EXCEPTION 'Check in date can´t be after check out date.';
-  end if;   
+    IF (p_check_out_date - p_check_in_date) < 1 THEN
+        RAISE EXCEPTION 'The stay can´t be less than a night.';
+    END IF;
 
-  if (p_check_out_date - p_check_in_date) < 1  then
-    RAISE EXCEPTION 'The stay can´t be less than a night.';
-  end if;   
+    v_max_stay := get_setting('max_stay_nights')::INTEGER;
 
-  v_max_stay := get_setting('max_stay_nights')::INTEGER;
+    IF v_max_stay < (p_check_out_date - p_check_in_date) THEN
+        RAISE EXCEPTION 'The maximum stay is 30 nights.';
+    END IF;
 
-  if v_max_stay < (p_check_out_date - p_check_in_date)   then
-    RAISE EXCEPTION 'The maximum stay is 30 nights.';
-  end if;     
-  
-  return true;
+    RETURN TRUE;
 END;
-$BODY$;
-
-ALTER FUNCTION public.validate_booking_dates(date, date)
-    OWNER TO postgres;
+$$;

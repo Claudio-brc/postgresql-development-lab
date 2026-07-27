@@ -1,12 +1,11 @@
--- This example assumes the metadata document has already been initialized.
-
 CREATE OR REPLACE FUNCTION update_property_parking(
     p_property_id BIGINT,
     p_has_parking BOOLEAN
 )
-RETURNS VOID AS $$
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 BEGIN
-
     IF NOT EXISTS (
         SELECT 1
         FROM properties
@@ -18,12 +17,11 @@ BEGIN
     END IF;
 
     UPDATE properties
-       SET metadata = jsonb_set(
-            COALESCE(metadata, '{}'::jsonb),
-            '{amenities,parking}',
-            to_jsonb(p_has_parking)
-       )
-     WHERE property_id = p_property_id;
-
+    SET metadata = jsonb_set(
+        COALESCE(metadata, '{}'::jsonb),
+        '{amenities,parking}',
+        to_jsonb(p_has_parking)
+    )
+    WHERE property_id = p_property_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;

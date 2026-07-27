@@ -1,17 +1,11 @@
--- FUNCTION: public.update_property_metadata(bigint, jsonb)
-
--- DROP FUNCTION IF EXISTS public.update_property_metadata(bigint, jsonb);
-
-CREATE OR REPLACE FUNCTION public.update_property_metadata(
-	p_property_id bigint,
-	p_metadata jsonb)
-    RETURNS void
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
+CREATE OR REPLACE FUNCTION update_property_metadata(
+    p_property_id BIGINT,
+    p_metadata    JSONB
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 BEGIN
-
     IF NOT EXISTS (
         SELECT 1
         FROM properties
@@ -23,13 +17,7 @@ BEGIN
     END IF;
 
     UPDATE properties
-       SET metadata = p_metadata
-     WHERE property_id = p_property_id;
-
+    SET metadata = p_metadata
+    WHERE property_id = p_property_id;
 END;
-$BODY$;
-
-ALTER FUNCTION public.update_property_metadata(bigint, jsonb)
-    OWNER TO postgres;
-	
-
+$$;

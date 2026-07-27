@@ -1,14 +1,9 @@
--- FUNCTION: public.get_reservation_summary(bigint)
-
--- DROP FUNCTION IF EXISTS public.get_reservation_summary(bigint);
-
-CREATE OR REPLACE FUNCTION public.get_reservation_summary(
-	p_reservation_id bigint)
-    RETURNS reservation_summary
-    LANGUAGE 'plpgsql'
-    COST 100
-    VOLATILE PARALLEL UNSAFE
-AS $BODY$
+CREATE OR REPLACE FUNCTION get_reservation_summary(
+    p_reservation_id BIGINT
+)
+RETURNS reservation_summary
+LANGUAGE plpgsql
+AS $$
 DECLARE
     v_reservation reservation_summary;
 BEGIN
@@ -20,15 +15,18 @@ BEGIN
             r.total_amount,
             r.status
         )::reservation_summary
-        FROM reservations r
-        JOIN guests g ON r.guest_id = g.guest_id
-        JOIN properties p ON r.property_id = p.property_id
+        FROM reservations AS r
+        JOIN guests AS g
+            ON r.guest_id = g.guest_id
+        JOIN properties AS p
+            ON r.property_id = p.property_id
         WHERE r.reservation_id = p_reservation_id
     );
 
-  RETURN v_reservation;	
-END;
-$BODY$;
+    IF v_reservation IS NULL THEN
+      RAISE EXCEPTION 'Reservation % not found.', p_reservation_id;
+    END IF;
 
-ALTER FUNCTION public.get_reservation_summary(bigint)
-    OWNER TO postgres;
+    RETURN v_reservation;
+END;
+$$;
