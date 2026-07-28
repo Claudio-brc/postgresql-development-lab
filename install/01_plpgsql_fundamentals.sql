@@ -1,170 +1,189 @@
 ﻿------------------------------------------------------------
--- Source: 01_get_property_rate.sql
+-- PostgreSQL Development Lab
+-- Scenario: 01_plpgsql_fundamentals
+--
+-- AUTO-GENERATED FILE
+-- DO NOT EDIT MANUALLY
 ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION calculate_stay_cost( p_property_id BIGINT ,
-                                                p_check_in_date DATE,
-                                                p_check_out_date DATE)
-RETURNS NUMERIC AS $$
+------------------------------------------------------------
+-- Source: 01_calculate_stay_cost.sql
+------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION calculate_stay_cost(
+    p_property_id    BIGINT,
+    p_check_in_date  DATE,
+    p_check_out_date DATE
+)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    v_total_cost NUMERIC      := 0;
-	v_nights_quantity NUMERIC := 0;
+    v_total_cost       NUMERIC := 0;
+    v_nights_quantity  NUMERIC := 0;
 BEGIN
-   --exception error de fechas
-   v_nights_quantity = p_check_out_date - p_check_in_date;
+    --exception error de fechas
+    v_nights_quantity := p_check_out_date - p_check_in_date;
 
-   if v_nights_quantity <= 0 then
-     raise exception 'dates are incorrect.';
-   end if;
-   
-  -- RETURN v_nights_quantity;
+    IF v_nights_quantity <= 0 THEN
+        RAISE EXCEPTION 'dates are incorrect.';
+    END IF;
 
-   SELECT p.nightly_rate         
+    SELECT p.nightly_rate
     INTO v_total_cost
-    FROM properties as p 
+    FROM properties AS p
     WHERE p.property_id = p_property_id;
 
-   if v_total_cost is null then
-     RAISE EXCEPTION 'Property % not found.', p_property_id;
-   end if;
-    -- Devuelve el resultado
-    RETURN v_nights_quantity * v_total_cost ;
+    IF v_total_cost IS NULL THEN
+        RAISE EXCEPTION 'Property % not found.', p_property_id;
+    END IF;
+
+    RETURN v_nights_quantity * v_total_cost;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
 
 ------------------------------------------------------------
 -- Source: 02_is_property_available.sql
 ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION is_property_available(p_property_id BIGINT,
-                                                 p_check_in_date DATE,
-                                                 p_check_out_date DATE)												
-RETURNS BOOLEAN AS $$
+CREATE OR REPLACE FUNCTION is_property_available(
+    p_property_id    BIGINT,
+    p_check_in_date  DATE,
+    p_check_out_date DATE
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
 DECLARE
-  v_conflict_exists boolean := false;
-  v_nights_quantity NUMERIC := 0;
-  v_property_exists BIGINT := null;
+    v_conflict_exists BOOLEAN := FALSE;
+    v_nights_quantity NUMERIC := 0;
+    v_property_exists BIGINT  := NULL;
 BEGIN
-  v_nights_quantity := p_check_out_date - p_check_in_date;
+    v_nights_quantity := p_check_out_date - p_check_in_date;
 
-  if v_nights_quantity <= 0 then
-     raise exception 'dates are incorrect.';
-  end if;
+    IF v_nights_quantity <= 0 THEN
+        RAISE EXCEPTION 'dates are incorrect.';
+    END IF;
 
-  SELECT p.property_id         
+    SELECT p.property_id
     INTO v_property_exists
-    FROM properties as p 
-   WHERE p.property_id = p_property_id;
+    FROM properties AS p
+    WHERE p.property_id = p_property_id;
 
-  if v_property_exists is null then
-    RAISE EXCEPTION 'Property % not found.', p_property_id;
-  end if;
+    IF v_property_exists IS NULL THEN
+        RAISE EXCEPTION 'Property % not found.', p_property_id;
+    END IF;
 
-  SELECT EXISTS (  
-     SELECT 1
-       FROM reservations AS r
-      WHERE r.check_in_date < p_check_out_date
-        AND r.check_out_date > p_check_in_date   
-        AND r.property_id = p_property_id
-        AND r.status IN ('PENDING', 'CONFIRMED')
-	) INTO v_conflict_exists;
+    SELECT EXISTS (
+        SELECT 1
+        FROM reservations AS r
+        WHERE r.check_in_date < p_check_out_date
+          AND r.check_out_date > p_check_in_date
+          AND r.property_id = p_property_id
+          AND r.status IN ('PENDING', 'CONFIRMED')
+    )
+    INTO v_conflict_exists;
 
-  return not v_conflict_exists;	
-
+    RETURN NOT v_conflict_exists;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 
 ------------------------------------------------------------
 -- Source: 03_show_guest_reservations.sql
 ------------------------------------------------------------
 
---drop function if exists show_guest_reservations;
-
-
-CREATE OR REPLACE FUNCTION show_guest_reservations( p_guest_id BIGINT)
+CREATE OR REPLACE FUNCTION show_guest_reservations(
+    p_guest_id BIGINT
+)
 RETURNS TABLE (
     reservation_id BIGINT,
-    property_name VARCHAR(150),
-    check_in DATE,
-    check_out DATE,
-    status TEXT
-) AS $$
+    property_name  VARCHAR(150),
+    check_in       DATE,
+    check_out      DATE,
+    status         TEXT
+)
+LANGUAGE plpgsql
+AS $$
 DECLARE
     v_guest_exists BIGINT;
-    rec RECORD;
+    rec            RECORD;
 BEGIN
-  SELECT g.guest_id         
+    SELECT g.guest_id
     INTO v_guest_exists
-    FROM guests as g 
-   WHERE g.guest_id = p_guest_id;
+    FROM guests AS g
+    WHERE g.guest_id = p_guest_id;
 
-   if v_guest_exists is null then
-     RAISE EXCEPTION 'Guest % not found.', p_guest_id;
-   end if;   
+    IF v_guest_exists IS NULL THEN
+        RAISE EXCEPTION 'Guest % not found.', p_guest_id;
+    END IF;
 
-   FOR rec IN
-     SELECT r.reservation_id, p.property_name, r.check_in_date, r.check_out_date,
-	        r.status
-     FROM reservations r
-    INNER JOIN properties p
- 	   ON p.property_id = r.property_id	
-    WHERE r.guest_id = p_guest_id
+    FOR rec IN
+        SELECT
+            r.reservation_id,
+            p.property_name,
+            r.check_in_date,
+            r.check_out_date,
+            r.status
+        FROM reservations AS r
+        INNER JOIN properties AS p
+            ON p.property_id = r.property_id
+        WHERE r.guest_id = p_guest_id
     LOOP
-      reservation_id := rec.reservation_id;
-	    property_name  := rec.property_name;
-	    check_in       := rec.check_in_date;
-	    check_out      := rec.check_out_date;
-	    status         := rec.status;
+        reservation_id := rec.reservation_id;
+        property_name  := rec.property_name;
+        check_in       := rec.check_in_date;
+        check_out      := rec.check_out_date;
+        status         := rec.status;
 
-      RETURN NEXT;
-    END LOOP; 
+        RETURN NEXT;
+    END LOOP;
 END;
-$$ LANGUAGE plpgsql;
-
---select * from show_guest_reservations(1);
-
-
+$$;
 
 
 ------------------------------------------------------------
 -- Source: 04_show_guest_reservations_return_query.sql
 ------------------------------------------------------------
 
---drop function if exists show_guest_reservations_return_query;
-
-
-CREATE OR REPLACE FUNCTION show_guest_reservations_return_query( p_guest_id BIGINT)
+CREATE OR REPLACE FUNCTION show_guest_reservations_return_query(
+    p_guest_id BIGINT
+)
 RETURNS TABLE (
     reservation_id BIGINT,
-    property_name VARCHAR(150),
-    check_in DATE,
-    check_out DATE,
-    status VARCHAR(20)
-) AS $$
+    property_name  VARCHAR(150),
+    check_in       DATE,
+    check_out      DATE,
+    status         VARCHAR(20)
+)
+LANGUAGE plpgsql
+AS $$
 DECLARE
     v_guest_exists BIGINT;
-
 BEGIN
-  SELECT g.guest_id         
+    SELECT g.guest_id
     INTO v_guest_exists
-    FROM guests as g 
-   WHERE g.guest_id = p_guest_id;
+    FROM guests AS g
+    WHERE g.guest_id = p_guest_id;
 
-   if v_guest_exists is null then
-     RAISE EXCEPTION 'Guest % not found.', p_guest_id;
-   end if;   
+    IF v_guest_exists IS NULL THEN
+        RAISE EXCEPTION 'Guest % not found.', p_guest_id;
+    END IF;
 
-   RETURN QUERY
-     SELECT r.reservation_id, p.property_name, r.check_in_date, r.check_out_date,
-	        r.status
-     FROM reservations r
-    INNER JOIN properties p
- 	   ON p.property_id = r.property_id	
-    WHERE r.guest_id = p_guest_id;
- 
+    RETURN QUERY
+        SELECT
+            r.reservation_id,
+            p.property_name,
+            r.check_in_date,
+            r.check_out_date,
+            r.status
+        FROM reservations AS r
+        INNER JOIN properties AS p
+            ON p.property_id = r.property_id
+        WHERE r.guest_id = p_guest_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 
 
