@@ -21,9 +21,10 @@ param(
 # Paths
 # ------------------------------------------------------------------
 
-$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectRoot = Split-Path $ScriptRoot -Parent
+$ScriptRoot    = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot   = Split-Path $ScriptRoot -Parent
 $ScenariosRoot = Join-Path $ProjectRoot "scenarios"
+$InstallRoot   = Join-Path $ProjectRoot "install"
 
 # ------------------------------------------------------------------
 # Utility
@@ -52,7 +53,7 @@ function Build-Scenario {
     )
 
     $ScenarioName = Split-Path $ScenarioPath -Leaf
-    $OutputFile = Join-Path $ScenarioPath "99_$ScenarioName.sql"
+    $OutputFile = Join-Path $InstallRoot "$ScenarioName.sql"
 
     Write-Info ""
     Write-Info "====================================================="
@@ -61,9 +62,6 @@ function Build-Scenario {
 
     $SqlFiles =
         Get-ChildItem $ScenarioPath -File -Filter "*.sql" |
-        Where-Object {
-            $_.Name -ne "99_$ScenarioName.sql"
-        } |
         Sort-Object Name
 
     if ($SqlFiles.Count -eq 0) {
@@ -73,6 +71,15 @@ function Build-Scenario {
     }
 
     $Builder = New-Object System.Text.StringBuilder
+	
+	$null = $Builder.AppendLine("------------------------------------------------------------")
+    $null = $Builder.AppendLine("-- PostgreSQL Development Lab")
+    $null = $Builder.AppendLine("-- Scenario: $ScenarioName")
+    $null = $Builder.AppendLine("--")
+    $null = $Builder.AppendLine("-- AUTO-GENERATED FILE")
+    $null = $Builder.AppendLine("-- DO NOT EDIT MANUALLY")
+    $null = $Builder.AppendLine("------------------------------------------------------------")
+    $null = $Builder.AppendLine()
 
     foreach ($File in $SqlFiles) {
 
@@ -106,6 +113,10 @@ function Build-Scenario {
 if (!(Test-Path $ScenariosRoot)) {
 
     throw "Scenarios folder not found: $ScenariosRoot"
+}
+
+if (!(Test-Path $InstallRoot)) {
+    New-Item -ItemType Directory -Path $InstallRoot | Out-Null
 }
 
 if ($Scenario) {
