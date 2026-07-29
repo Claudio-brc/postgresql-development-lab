@@ -13,6 +13,7 @@
     .\build-install.ps1
 #>
 
+
 param (
     [string]$OutputFile = "postgresql-development-lab.sql"
 )
@@ -34,6 +35,22 @@ function Write-Step {
 
     Write-Host "  + $Message"
 }
+
+# ------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------
+
+Write-Info "Building scenario scripts..."
+
+& (Join-Path $PSScriptRoot "build-scenarios.ps1")
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Scenario build failed."
+}
+
+Write-Info ""
+Write-Info "Building master installation script..."
+Write-Info ""
 
 #
 # Validate directories
@@ -72,7 +89,6 @@ if ($ScenarioFiles.Count -eq 0) {
 # Build master script
 #
 
-Write-Info "Building master installation script..."
 
 $Builder = New-Object System.Text.StringBuilder
 
