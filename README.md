@@ -2,22 +2,87 @@
 
 > A practical PostgreSQL laboratory focused on writing production-style database code using PL/pgSQL, JSONB, triggers, business rules, and advanced PostgreSQL features.
 
-Unlike SQL tutorial repositories, this project follows the development of a realistic booking platform, implementing business logic directly inside PostgreSQL while exploring advanced database features.
+This project follows the development of a realistic booking platform, implementing business logic directly inside PostgreSQL using production-style database code.
 
 ---
 
-## Project Goals
+## Database Schema
 
-This laboratory was created to:
+![Entity Relationship Diagram](assets/erd1.png)
 
-- Learn PostgreSQL through practical scenarios.
-- Write clean and maintainable PL/pgSQL code.
-- Model real business rules at the database level.
-- Explore PostgreSQL features beyond basic CRUD.
-- Build a portfolio demonstrating backend database development skills.
+---
 
-The project is intentionally organized as progressive scenarios, where each topic builds upon previous concepts.
+Project goals:
 
+- Demonstrate advanced PostgreSQL development techniques.
+- Implement business logic directly inside PostgreSQL.
+- Explore production-oriented PL/pgSQL patterns.
+- Showcase practical use of JSONB, triggers, and advanced database features.
+- Serve as a reference for PostgreSQL application development.
+- The project is intentionally organized as progressive scenarios, where each topic builds upon previous concepts.
+
+---
+
+## Installation
+
+### Requirements
+
+- Git
+- PowerShell 7+
+- PostgreSQL 17 (or compatible)
+- pgAdmin, `psql`, or another PostgreSQL client
+
+### Option 1: Run PostgreSQL with Docker
+
+Start a PostgreSQL instance using the provided Docker Compose file:
+
+```bash
+docker compose up -d
+```
+
+The container will be created with the following default configuration:
+
+- **Database:** `postgresql_development_lab`
+- **Username:** `postgres`
+- **Password:** `postgres`
+- **Port:** `5432`
+
+### Build the Project
+
+Run the build script to generate the consolidated installation file:
+
+```powershell
+./tools/build-all.ps1
+```
+
+This generates:
+
+```text
+install/
+└── postgresql-development-lab.sql
+```
+
+### Install the project
+
+Open the generated script in pgAdmin (or your preferred PostgreSQL client) and execute:
+
+```text
+install/postgresql-development-lab.sql
+```
+
+### Explore the examples
+
+After the installation completes, execute the scripts located in the `examples` directory to see the implemented functions and procedures in action.
+
+```text
+examples/
+├── 01_plpgsql_fundamentals.sql
+├── 02_business_rules.sql
+├── 03_triggers_and_auditing.sql
+├── 04_error_handling_and_logging.sql
+├── 05_advanced_types.sql
+└── 06_jsonb.sql
+```
 ---
 
 # Topics Covered
@@ -86,40 +151,39 @@ Examples of:
 ```
 .
 ├── examples
-│   ├── 01_plpgsql_fundamentals.sql
-│   ├── 02_business_rules.sql
-│   ├── 03_triggers_and_auditing.sql
-│   ├── 04_error_handling_and_logging.sql
-│   ├── 05_advanced_types.sql
-│   └── 06_jsonb.sql
+│ ├── 01_plpgsql_fundamentals.sql
+│ ├── 02_business_rules.sql
+│ ├── 03_triggers_and_auditing.sql
+│ ├── 04_error_handling_and_logging.sql
+│ ├── 05_advanced_types.sql
+│ └── 06_jsonb.sql
 │
 ├── install
-│   ├── 01_schema.sql
-│   ├── 02_plpgsql_fundamentals.sql
-│   ├── 03_business_rules.sql
-│   ├── ...
-│   └── postgresql-development-lab.sql
-│
-├── scenarios
-│   ├── 01_schema
-│   │   ├── 00_custom_types.sql
-│   │   ├── 01_core_schema.sql
-│   │   └── 02_core_seed.sql
-│   │
-│   ├── 02_plpgsql_fundamentals
-│   │   ├── 01_validate_booking_dates.sql
-│   │   ├── 02_calculate_stay_cost.sql
-│   │   └── ...
-│   │
-│   ├── 03_business_rules
-│   ├── 04_triggers_and_auditing
-│   ├── 05_advanced_types
-│   └── 06_jsonb
+│ ├── 01_schema.sql
+│ ├── 02_plpgsql_fundamentals.sql
+│ ├── 03_business_rules.sql
+│ ├── ...
+│ └── postgresql-development-lab.sql
 │
 ├── schema
+│ ├── 00_custom_types.sql
+│ ├── 01_core_schema.sql
+│ └── 02_core_seed.sql
+│
+├── scenarios
+│ ├── 01_plpgsql_fundamentals
+│ │ ├── 01_validate_booking_dates.sql
+│ │ ├── 02_calculate_stay_cost.sql
+│ │ └── ...
+│ │
+│ ├── 02_business_rules
+│ ├── 03_triggers_and_auditing
+│ ├── 04_error_handling
+│ ├── 05_advanced_types
+│ └── 06_jsonb
 │
 ├── tools
-│   └── build-all.ps1
+│ └── build-all.ps1
 │
 └── README.md
 ```
@@ -130,28 +194,13 @@ Examples of:
 
 | Scenario | Status |
 |-----------|--------|
-| Database Schema | ✅ |
 | PL/pgSQL Fundamentals | ✅ |
 | Business Rules | ✅ |
 | Triggers & Auditing | ✅ |
-| Advanced Types | ✅ |
-| JSONB | 🚧 |
 | Error Handling | Planned |
-| Concurrency | Planned |
+| Advanced Types | ✅ |
+| JSONB | ✅ |
 
----
-
-# Why This Project?
-
-Many SQL repositories demonstrate isolated queries.
-
-This project focuses on something different:
-
-- designing a complete database;
-- implementing business logic inside PostgreSQL;
-- writing production-style PL/pgSQL;
-- organizing SQL code as a maintainable project;
-- using PostgreSQL as an application platform rather than only a storage engine.
 
 ---
 
@@ -160,25 +209,14 @@ This project focuses on something different:
 - PostgreSQL
 - PL/pgSQL
 - JSONB
-- Git
+- Docker
 - PowerShell (build scripts)
 
 ---
 
 # Future Topics
 
-Planned additions include:
-
-- Transactions
-- Concurrency
-- Locking
-- Advisory Locks
-- Dynamic SQL
-- Performance considerations
-- Testing strategies
-- Extensions
-- Security
-- Roles & permissions
+Additional scenarios may be added over time as the laboratory evolves.
 
 ---
 
