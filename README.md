@@ -2,7 +2,7 @@
 
 > A practical PostgreSQL laboratory focused on writing production-style database code using PL/pgSQL, JSONB, triggers, business rules, and advanced PostgreSQL features.
 
-This project follows the development of a realistic booking platform, implementing business logic directly inside PostgreSQL using production-style database code.
+This project follows the development of a realistic booking platform, implementing business logic directly inside PostgreSQL through practical development scenarios.
 
 ---
 
@@ -12,7 +12,7 @@ This project follows the development of a realistic booking platform, implementi
 
 ---
 
-Project goals:
+## Project Goals:
 
 - Demonstrate advanced PostgreSQL development techniques.
 - Implement business logic directly inside PostgreSQL.
@@ -83,6 +83,21 @@ examples/
 ├── 05_advanced_types.sql
 └── 06_jsonb.sql
 ```
+
+### Example Workflow
+
+The example scripts simulate a typical booking lifecycle, including:
+
+- booking validation;
+- availability checking;
+- stay cost calculation;
+- discount application;
+- reservation management;
+- service management;
+- payment processing;
+- automatic auditing.
+
+
 ---
 
 # Topics Covered
@@ -197,7 +212,7 @@ Examples of:
 | PL/pgSQL Fundamentals | ✅ |
 | Business Rules | ✅ |
 | Triggers & Auditing | ✅ |
-| Error Handling | Planned |
+| Error Handling | ✅ |
 | Advanced Types | ✅ |
 | JSONB | ✅ |
 
