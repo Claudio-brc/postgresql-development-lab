@@ -1343,7 +1343,6 @@ DECLARE
     v_service_id BIGINT;
 BEGIN
 
-    -- ToDo:  what happend if i get repeated service id?
     IF NOT EXISTS (
         SELECT 1
         FROM reservations
@@ -1576,7 +1575,6 @@ DECLARE
     v_quantity   INTEGER;
 BEGIN
 
-    -- TODO: Validate that each service includes a valid service_id and quantity before processing.
     IF NOT EXISTS (
         SELECT 1
         FROM reservations

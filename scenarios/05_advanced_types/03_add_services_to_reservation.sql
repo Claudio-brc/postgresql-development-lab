@@ -10,7 +10,6 @@ DECLARE
     v_service_id BIGINT;
 BEGIN
 
-    -- ToDo:  what happend if i get repeated service id?
     IF NOT EXISTS (
         SELECT 1
         FROM reservations

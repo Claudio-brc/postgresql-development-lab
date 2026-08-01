@@ -12,7 +12,6 @@ DECLARE
     v_quantity   INTEGER;
 BEGIN
 
-    -- TODO: Validate that each service includes a valid service_id and quantity before processing.
     IF NOT EXISTS (
         SELECT 1
         FROM reservations
