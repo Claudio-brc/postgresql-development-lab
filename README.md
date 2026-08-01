@@ -8,7 +8,7 @@ This project follows the development of a realistic booking platform, implementi
 
 ## Database Schema
 
-![Entity Relationship Diagram](assets/erd1.png)
+![Entity Relationship Diagram](assets/erd-1.png)
 
 ---
 
