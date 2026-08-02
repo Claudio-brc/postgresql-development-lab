@@ -35,6 +35,8 @@ EXCEPTION
             'try_create_reservation_with_logging'
         );
 
-        RAISE;
+        -- This function returns NULL when reservation creation fails.
+        -- The caller decides whether the failure should be raised again.
+        RETURN NULL;
 END;
 $$;
