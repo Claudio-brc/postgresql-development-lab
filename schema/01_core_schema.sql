@@ -9,6 +9,8 @@ DROP TABLE IF EXISTS guests CASCADE;
 DROP TABLE IF EXISTS discounts CASCADE;
 DROP TABLE IF EXISTS app_settings CASCADE;
 
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 
 CREATE TABLE guests (
     guest_id      BIGSERIAL PRIMARY KEY,
@@ -80,6 +82,14 @@ CREATE TABLE reservations (
     CONSTRAINT chk_reservation_dates
         CHECK (check_out_date > check_in_date)
 );
+
+ALTER TABLE reservations
+ADD CONSTRAINT exclude_overlapping_active_reservations
+EXCLUDE USING gist (
+    property_id WITH =,
+    daterange(check_in_date, check_out_date, '[)') WITH &&
+)
+WHERE (status IN ('PENDING', 'CONFIRMED'));
 
 CREATE TABLE payments (
     payment_id          BIGSERIAL PRIMARY KEY,
