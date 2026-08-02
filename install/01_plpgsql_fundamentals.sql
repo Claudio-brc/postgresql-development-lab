@@ -58,7 +58,7 @@ AS $$
 DECLARE
     v_conflict_exists BOOLEAN := FALSE;
     v_nights_quantity NUMERIC := 0;
-    v_property_exists BIGINT  := NULL;
+    v_property_is_active BOOLEAN := NULL;
 BEGIN
     v_nights_quantity := p_check_out_date - p_check_in_date;
 
@@ -66,13 +66,17 @@ BEGIN
         RAISE EXCEPTION 'dates are incorrect.';
     END IF;
 
-    SELECT p.property_id
-    INTO v_property_exists
+    SELECT p.is_active
+    INTO v_property_is_active
     FROM properties AS p
     WHERE p.property_id = p_property_id;
 
-    IF v_property_exists IS NULL THEN
+    IF v_property_is_active IS NULL THEN
         RAISE EXCEPTION 'Property % not found.', p_property_id;
+    END IF;
+
+    IF NOT v_property_is_active THEN
+        RETURN FALSE;
     END IF;
 
     SELECT EXISTS (
@@ -88,6 +92,7 @@ BEGIN
     RETURN NOT v_conflict_exists;
 END;
 $$;
+
 
 
 ------------------------------------------------------------
