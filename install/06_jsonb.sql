@@ -210,6 +210,11 @@ BEGIN
         v_service_id := (v_service ->> 'service_id')::BIGINT;
         v_quantity := (v_service ->> 'quantity')::INTEGER;
 
+        IF v_quantity IS NULL OR v_quantity <= 0 THEN
+            RAISE EXCEPTION
+                'Service quantity must be greater than zero.';
+        END IF;
+
         SELECT price
         INTO v_unit_price
         FROM services
@@ -234,6 +239,7 @@ BEGIN
     END LOOP;
 END;
 $$;
+
 
 
 
