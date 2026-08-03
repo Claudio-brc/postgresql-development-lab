@@ -16,6 +16,8 @@ BEGIN
             p_property_id;
     END IF;
 
+    -- If the "amenities" structure does not exist, jsonb_set() leaves the
+    -- JSON document unchanged because it cannot create missing intermediate keys.
     UPDATE properties
     SET metadata = jsonb_set(
         COALESCE(metadata, '{}'::jsonb),
