@@ -73,10 +73,11 @@ install/postgresql-development-lab.sql
 ### Upgrade an existing database
 
 To preserve existing data, do not run the destructive consolidated installer.
-Apply the property-type upgrade directly instead:
+Apply the upgrades in order instead:
 
 ```text
 schema/upgrades/001_add_property_type.sql
+schema/upgrades/002_add_property_code.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
