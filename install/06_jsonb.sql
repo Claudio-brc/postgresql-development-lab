@@ -122,6 +122,8 @@ BEGIN
             p_property_id;
     END IF;
 
+    -- If the "amenities" structure does not exist, jsonb_set() leaves the
+    -- JSON document unchanged because it cannot create missing intermediate keys.
     UPDATE properties
     SET metadata = jsonb_set(
         COALESCE(metadata, '{}'::jsonb),
@@ -131,6 +133,7 @@ BEGIN
     WHERE property_id = p_property_id;
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -198,6 +201,16 @@ BEGIN
 
     IF jsonb_array_length(p_services) = 0 THEN
         RETURN;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_services) AS item(service_data)
+        GROUP BY (service_data ->> 'service_id')::BIGINT
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION
+            'The service list contains repeated services.';
     END IF;
 
     DELETE FROM reservation_services

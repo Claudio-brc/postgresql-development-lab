@@ -45,7 +45,8 @@ SELECT get_reservation_summary(
 --
 -- Description:
 --   Replaces the services associated with a reservation using the provided
---   array of service IDs.
+--   array of service IDs. Repeated IDs are consolidated and their number of
+--   occurrences is stored as the service quantity.
 --
 -- Parameters:
 --   p_reservation_id BIGINT   - Reservation identifier.
@@ -60,7 +61,7 @@ SELECT get_reservation_summary(
 
 SELECT add_services_to_reservation(
     1,
-    ARRAY[1, 2, 3]
+    ARRAY[1, 1, 2, 3]
 );
 
 

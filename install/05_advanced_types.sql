@@ -89,6 +89,7 @@ AS $$
 DECLARE
     v_unit_price NUMERIC;
     v_service_id BIGINT;
+    v_quantity   INTEGER;
 BEGIN
 
     IF NOT EXISTS (
@@ -109,7 +110,12 @@ BEGIN
         RETURN;
     END IF;
 
-    FOREACH v_service_id IN ARRAY p_service_ids
+    FOR v_service_id, v_quantity IN
+        SELECT
+            service_id,
+            COUNT(*)::INTEGER
+        FROM unnest(p_service_ids) AS item(service_id)
+        GROUP BY service_id
     LOOP
         SELECT price
         INTO v_unit_price
@@ -129,12 +135,13 @@ BEGIN
         VALUES (
             p_reservation_id,
             v_service_id,
-            1,
+            v_quantity,
             v_unit_price
         );
     END LOOP;
 END;
 $$;
+
 
 
 

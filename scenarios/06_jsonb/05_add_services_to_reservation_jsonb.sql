@@ -35,6 +35,16 @@ BEGIN
         RETURN;
     END IF;
 
+    IF EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_services) AS item(service_data)
+        GROUP BY (service_data ->> 'service_id')::BIGINT
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION
+            'The service list contains repeated services.';
+    END IF;
+
     DELETE FROM reservation_services
     WHERE reservation_id = p_reservation_id;
 

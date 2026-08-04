@@ -77,7 +77,7 @@ SELECT update_property_parking(1, FALSE);
 -- Returns:
 --   No value.
 --   Raises an exception if the reservation does not exist, the JSON document
---   is invalid, or any specified service does not exist.
+--   is invalid, any specified service does not exist, or a service is repeated.
 --------------------------------------------------------------------------------
 
 SELECT add_services_to_reservation(

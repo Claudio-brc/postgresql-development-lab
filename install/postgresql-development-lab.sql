@@ -1359,6 +1359,7 @@ AS $$
 DECLARE
     v_unit_price NUMERIC;
     v_service_id BIGINT;
+    v_quantity   INTEGER;
 BEGIN
 
     IF NOT EXISTS (
@@ -1379,7 +1380,12 @@ BEGIN
         RETURN;
     END IF;
 
-    FOREACH v_service_id IN ARRAY p_service_ids
+    FOR v_service_id, v_quantity IN
+        SELECT
+            service_id,
+            COUNT(*)::INTEGER
+        FROM unnest(p_service_ids) AS item(service_id)
+        GROUP BY service_id
     LOOP
         SELECT price
         INTO v_unit_price
@@ -1399,12 +1405,13 @@ BEGIN
         VALUES (
             p_reservation_id,
             v_service_id,
-            1,
+            v_quantity,
             v_unit_price
         );
     END LOOP;
 END;
 $$;
+
 
 
 
@@ -1538,6 +1545,8 @@ BEGIN
             p_property_id;
     END IF;
 
+    -- If the "amenities" structure does not exist, jsonb_set() leaves the
+    -- JSON document unchanged because it cannot create missing intermediate keys.
     UPDATE properties
     SET metadata = jsonb_set(
         COALESCE(metadata, '{}'::jsonb),
@@ -1547,6 +1556,7 @@ BEGIN
     WHERE property_id = p_property_id;
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -1614,6 +1624,16 @@ BEGIN
 
     IF jsonb_array_length(p_services) = 0 THEN
         RETURN;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_services) AS item(service_data)
+        GROUP BY (service_data ->> 'service_id')::BIGINT
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION
+            'The service list contains repeated services.';
     END IF;
 
     DELETE FROM reservation_services
