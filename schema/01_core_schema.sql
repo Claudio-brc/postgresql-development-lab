@@ -25,6 +25,16 @@ CREATE TABLE properties (
     property_id     BIGSERIAL PRIMARY KEY,
     property_name   VARCHAR(150) NOT NULL,
 
+    property_type   VARCHAR(20)
+                    NOT NULL
+                    CHECK (
+                        property_type IN (
+                            'CABIN',
+                            'APARTMENT',
+                            'ROOM'
+                        )
+                    ),
+
     nightly_rate    NUMERIC(12,2)
                      NOT NULL
                      CHECK (nightly_rate >= 0),

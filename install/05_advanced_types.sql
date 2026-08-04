@@ -22,12 +22,14 @@ BEGIN
     INSERT INTO properties (
         property_name,
         nightly_rate,
-        is_active
+        is_active,
+        property_type
     )
     VALUES (
         p_property.property_name,
         p_property.nightly_rate,
-        p_property.is_active
+        p_property.is_active,
+        p_property.property_type
     )
     RETURNING property_id
     INTO v_property_id;
@@ -35,6 +37,7 @@ BEGIN
     RETURN v_property_id;
 END;
 $$;
+
 
 
 ------------------------------------------------------------

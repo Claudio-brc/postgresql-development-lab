@@ -8,7 +8,8 @@ DROP TYPE IF EXISTS service_summary CASCADE;
 CREATE TYPE property_request AS (
     property_name VARCHAR(150),
     nightly_rate NUMERIC,
-    is_active BOOLEAN
+    is_active BOOLEAN,
+    property_type VARCHAR(20)
 );
 
 CREATE TYPE reservation_summary AS

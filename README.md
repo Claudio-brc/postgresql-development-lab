@@ -70,6 +70,18 @@ Open the generated script in pgAdmin (or your preferred PostgreSQL client) and e
 install/postgresql-development-lab.sql
 ```
 
+### Upgrade an existing database
+
+To preserve existing data, do not run the destructive consolidated installer.
+Apply the property-type upgrade directly instead:
+
+```text
+schema/upgrades/001_add_property_type.sql
+```
+
+Because historical rows have no reliable type information, the upgrade assigns
+`ROOM` as a transitional value. Review and correct those rows after applying it.
+
 ### Explore the examples
 
 After the installation completes, execute the scripts located in the `examples` directory to see the implemented functions and procedures in action.

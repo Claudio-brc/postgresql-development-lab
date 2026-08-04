@@ -17,7 +17,8 @@ SELECT create_property(
     ROW(
         'Lake View Cabin',
         180.00,
-        TRUE
+        TRUE,
+        'CABIN'
     )::property_request
 );
 

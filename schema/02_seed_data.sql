@@ -4,18 +4,18 @@ SELECT
     'guest' || n || '@example.com'
 FROM generate_series(1,20) AS n;
 
-INSERT INTO properties (property_name, nightly_rate)
+INSERT INTO properties (property_name, nightly_rate, property_type)
 VALUES
-('Lake View Cabin', 120.00),
-('Mountain Retreat', 150.00),
-('Downtown Apartment', 90.00),
-('Patagonia Loft', 110.00),
-('Forest House', 180.00),
-('Riverside Cottage', 140.00),
-('City Studio', 75.00),
-('Lakeside Bungalow', 200.00),
-('Family Cabin', 160.00),
-('Luxury Suite', 300.00);
+('Lake View Cabin', 120.00, 'CABIN'),
+('Mountain Retreat', 150.00, 'CABIN'),
+('Downtown Apartment', 90.00, 'APARTMENT'),
+('Patagonia Loft', 110.00, 'APARTMENT'),
+('Forest House', 180.00, 'CABIN'),
+('Riverside Cottage', 140.00, 'CABIN'),
+('City Studio', 75.00, 'APARTMENT'),
+('Lakeside Bungalow', 200.00, 'CABIN'),
+('Family Cabin', 160.00, 'CABIN'),
+('Luxury Suite', 300.00, 'ROOM');
 
 INSERT INTO reservations (
     guest_id,
