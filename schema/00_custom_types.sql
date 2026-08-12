@@ -9,7 +9,9 @@ CREATE TYPE property_request AS (
     property_name VARCHAR(150),
     nightly_rate NUMERIC,
     is_active BOOLEAN,
-    property_type VARCHAR(20)
+    property_type VARCHAR(20),
+    property_code VARCHAR(10),
+    metadata JSONB
 );
 
 CREATE TYPE reservation_summary AS

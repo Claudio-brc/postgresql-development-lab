@@ -78,6 +78,7 @@ Apply the upgrades in order instead:
 ```text
 schema/upgrades/001_add_property_type.sql
 schema/upgrades/002_add_property_code.sql
+schema/upgrades/003_update_property_creation.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns

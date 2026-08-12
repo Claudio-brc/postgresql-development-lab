@@ -7,18 +7,34 @@
 --
 -- Parameters:
 --   p_property PROPERTY_REQUEST - Composite value containing the property's
---                                 information.
+--                                 name, rate, active status, type, optional
+--                                 code, and optional JSONB metadata.
 --
 -- Returns:
 --   The ID of the newly created property as BIGINT.
 --------------------------------------------------------------------------------
 
+-- NULL property_code delegates code generation to trg_properties_set_property_code.
 SELECT create_property(
     ROW(
-        'Lake View Cabin',
+        'Advanced Types Cabin',
         180.00,
         TRUE,
-        'CABIN'
+        'CABIN',
+        NULL,
+        '{"amenities":["fireplace","lake_view"]}'::JSONB
+    )::property_request
+);
+
+-- Manual codes are accepted and normalized by the same trigger.
+SELECT create_property(
+    ROW(
+        'Advanced Types Apartment',
+        135.00,
+        TRUE,
+        'APARTMENT',
+        'adv-9000',
+        '{"floor":4,"elevator":true}'::JSONB
     )::property_request
 );
 

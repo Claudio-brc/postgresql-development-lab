@@ -43,8 +43,9 @@ function Write-Step {
 Write-Info "Building scenario scripts..."
 
 & (Join-Path $PSScriptRoot "build-scenarios.ps1")
+$ScenarioBuildSucceeded = $?
 
-if ($LASTEXITCODE -ne 0) {
+if (!$ScenarioBuildSucceeded) {
     throw "Scenario build failed."
 }
 

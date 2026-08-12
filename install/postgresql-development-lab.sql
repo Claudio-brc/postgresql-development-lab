@@ -22,7 +22,9 @@ CREATE TYPE property_request AS (
     property_name VARCHAR(150),
     nightly_rate NUMERIC,
     is_active BOOLEAN,
-    property_type VARCHAR(20)
+    property_type VARCHAR(20),
+    property_code VARCHAR(10),
+    metadata JSONB
 );
 
 CREATE TYPE reservation_summary AS
@@ -1362,13 +1364,17 @@ BEGIN
         property_name,
         nightly_rate,
         is_active,
-        property_type
+        property_type,
+        property_code,
+        metadata
     )
     VALUES (
         p_property.property_name,
         p_property.nightly_rate,
-        p_property.is_active,
-        p_property.property_type
+        COALESCE(p_property.is_active, TRUE),
+        p_property.property_type,
+        p_property.property_code,
+        p_property.metadata
     )
     RETURNING property_id
     INTO v_property_id;
