@@ -23,16 +23,17 @@ SELECT update_property_metadata(
             "smart_tv": true
         },
         "languages": [
-            "English",
-            "Spanish"
+            "Spanish",
+            "English"
         ],
-        "check_in": {
-            "from": "15:00",
-            "to": "22:00"
-        },
         "house_rules": {
-            "pets_allowed": false,
-            "smoking": false
+            "smoking": false,
+            "pets_allowed": false
+        },
+        "arrival_departure": {
+            "check_in_from": "15:00",
+            "check_in_to": "22:00",
+            "check_out_until": "11:00"
         }
     }'::jsonb
 );
@@ -42,8 +43,7 @@ SELECT update_property_metadata(
 --
 -- Description:
 -- Updates the parking amenity flag within the metadata JSONB document of a
--- specific property. The procedure assumes the metadata document has already
--- been initialized (or will be created with COALESCE).
+-- specific property. Missing metadata or amenities objects are initialized.
 -- If the property does not exist, an exception is raised.
 --
 -- Parameters:
@@ -55,8 +55,9 @@ SELECT update_property_metadata(
 -- VOID - No return value. The update is applied directly to the properties table.
 --
 -- Notes:
--- - Uses jsonb_set() to navigate the nested path '{amenities,parking}'.
--- - COALESCE(metadata, '{}'::jsonb) ensures the operation works even if the metadata column is NULL.
+-- - Uses jsonb_set() to replace the amenities object while preserving its
+--   existing values and changing only parking.
+-- - COALESCE ensures the operation works if metadata or amenities is missing.
 -- - The procedure does not return any value; use SELECT or CALL to execute it.
 --------------------------------------------------------------------------------
 

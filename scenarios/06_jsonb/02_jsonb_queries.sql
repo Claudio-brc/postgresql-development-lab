@@ -24,13 +24,13 @@ where metadata is not null;
 
 /*
 ==========================================
-Extract a scalar value
+Access a top-level array
 ==========================================
 */
 
 SELECT
     property_name,
-    metadata ->> 'languages' AS languages
+    metadata -> 'languages' AS languages
 FROM properties
 where metadata is not null;
 
@@ -42,14 +42,15 @@ Access nested values
 
 SELECT
     property_name,
-    metadata -> 'check_in' ->> 'from' AS check_in_from,
-    metadata -> 'check_in' ->> 'to'   AS check_in_to
+    metadata -> 'arrival_departure' ->> 'check_in_from'    AS check_in_from,
+    metadata -> 'arrival_departure' ->> 'check_in_to'      AS check_in_to,
+    metadata -> 'arrival_departure' ->> 'check_out_until'  AS check_out_until
 FROM properties
 where metadata is not null;
 
 /*
 ==========================================
-Filter: Properties that allow pets
+Filter: Properties that do not allow pets
 ==========================================
 */
 

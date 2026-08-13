@@ -1566,13 +1566,13 @@ where metadata is not null;
 
 /*
 ==========================================
-Extract a scalar value
+Access a top-level array
 ==========================================
 */
 
 SELECT
     property_name,
-    metadata ->> 'languages' AS languages
+    metadata -> 'languages' AS languages
 FROM properties
 where metadata is not null;
 
@@ -1584,14 +1584,15 @@ Access nested values
 
 SELECT
     property_name,
-    metadata -> 'check_in' ->> 'from' AS check_in_from,
-    metadata -> 'check_in' ->> 'to'   AS check_in_to
+    metadata -> 'arrival_departure' ->> 'check_in_from'    AS check_in_from,
+    metadata -> 'arrival_departure' ->> 'check_in_to'      AS check_in_to,
+    metadata -> 'arrival_departure' ->> 'check_out_until'  AS check_out_until
 FROM properties
 where metadata is not null;
 
 /*
 ==========================================
-Filter: Properties that allow pets
+Filter: Properties that do not allow pets
 ==========================================
 */
 
@@ -1599,6 +1600,7 @@ SELECT
     property_name
 FROM properties
 WHERE metadata -> 'house_rules' ->> 'pets_allowed' = 'false';
+
 
 
 ------------------------------------------------------------
@@ -1623,13 +1625,14 @@ BEGIN
             p_property_id;
     END IF;
 
-    -- If the "amenities" structure does not exist, jsonb_set() leaves the
-    -- JSON document unchanged because it cannot create missing intermediate keys.
+    -- Replace the complete "amenities" object so a missing intermediate key can
+    -- be created while preserving any existing amenity values.
     UPDATE properties
     SET metadata = jsonb_set(
         COALESCE(metadata, '{}'::jsonb),
-        '{amenities,parking}',
-        to_jsonb(p_has_parking)
+        '{amenities}',
+        COALESCE(metadata -> 'amenities', '{}'::jsonb)
+            || jsonb_build_object('parking', p_has_parking)
     )
     WHERE property_id = p_property_id;
 END;

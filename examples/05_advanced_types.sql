@@ -22,7 +22,24 @@ SELECT create_property(
         TRUE,
         'CABIN',
         NULL,
-        '{"amenities":["fireplace","lake_view"]}'::JSONB
+        '{
+            "amenities": {
+                "wifi": true,
+                "parking": true,
+                "air_conditioning": false,
+                "smart_tv": true
+            },
+            "languages": ["Spanish", "English"],
+            "house_rules": {
+                "smoking": false,
+                "pets_allowed": true
+            },
+            "arrival_departure": {
+                "check_in_from": "15:00",
+                "check_in_to": "22:00",
+                "check_out_until": "11:00"
+            }
+        }'::JSONB
     )::property_request
 );
 
@@ -34,7 +51,24 @@ SELECT create_property(
         TRUE,
         'APARTMENT',
         'adv-9000',
-        '{"floor":4,"elevator":true}'::JSONB
+        '{
+            "amenities": {
+                "wifi": true,
+                "parking": false,
+                "air_conditioning": true,
+                "smart_tv": true
+            },
+            "languages": ["Spanish", "English"],
+            "house_rules": {
+                "smoking": false,
+                "pets_allowed": false
+            },
+            "arrival_departure": {
+                "check_in_from": "14:00",
+                "check_in_to": "21:00",
+                "check_out_until": "10:00"
+            }
+        }'::JSONB
     )::property_request
 );
 

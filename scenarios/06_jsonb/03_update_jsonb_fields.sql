@@ -16,13 +16,14 @@ BEGIN
             p_property_id;
     END IF;
 
-    -- If the "amenities" structure does not exist, jsonb_set() leaves the
-    -- JSON document unchanged because it cannot create missing intermediate keys.
+    -- Replace the complete "amenities" object so a missing intermediate key can
+    -- be created while preserving any existing amenity values.
     UPDATE properties
     SET metadata = jsonb_set(
         COALESCE(metadata, '{}'::jsonb),
-        '{amenities,parking}',
-        to_jsonb(p_has_parking)
+        '{amenities}',
+        COALESCE(metadata -> 'amenities', '{}'::jsonb)
+            || jsonb_build_object('parking', p_has_parking)
     )
     WHERE property_id = p_property_id;
 END;
