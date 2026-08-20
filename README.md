@@ -79,10 +79,15 @@ Apply the upgrades in order instead:
 schema/upgrades/001_add_property_type.sql
 schema/upgrades/002_add_property_code.sql
 schema/upgrades/003_update_property_creation.sql
+schema/upgrades/004_add_guest_is_active.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
 `ROOM` as a transitional value. Review and correct those rows after applying it.
+
+The guest upgrade keeps every existing guest active. Guests can then be soft
+deleted with `UPDATE guests SET is_active = FALSE`; it does not remove rows or
+their reservation history. Existing queries are not filtered by activity.
 
 ### Explore the examples
 
@@ -97,6 +102,9 @@ examples/
 ├── 05_advanced_types.sql
 └── 06_jsonb.sql
 ```
+
+Guest soft-delete behavior and reservation-history preservation are verified by
+`examples/08_guest_soft_delete.sql`.
 
 ### Example Workflow
 
