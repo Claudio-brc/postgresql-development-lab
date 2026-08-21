@@ -71,10 +71,38 @@ CREATE TABLE guests (
     full_name     VARCHAR(100) NOT NULL,
     email         VARCHAR(255) NOT NULL UNIQUE,
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    document_type VARCHAR(30),
+    document_number VARCHAR(50),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMPTZ  
+    updated_at    TIMESTAMPTZ,
+
+    CONSTRAINT chk_guests_document_pair
+        CHECK (
+            (document_type IS NULL AND document_number IS NULL)
+            OR
+            (document_type IS NOT NULL AND document_number IS NOT NULL)
+        ),
+
+    CONSTRAINT uq_guests_document
+        UNIQUE (document_type, document_number)
 
 );
+
+CREATE OR REPLACE FUNCTION normalize_guest_document()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.document_type := NULLIF(UPPER(BTRIM(NEW.document_type)), '');
+    NEW.document_number := NULLIF(BTRIM(NEW.document_number), '');
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_guests_normalize_document
+BEFORE INSERT OR UPDATE OF document_type, document_number ON guests
+FOR EACH ROW
+EXECUTE FUNCTION normalize_guest_document();
 
 CREATE TABLE properties (
     property_id     BIGSERIAL PRIMARY KEY,

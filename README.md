@@ -80,6 +80,7 @@ schema/upgrades/001_add_property_type.sql
 schema/upgrades/002_add_property_code.sql
 schema/upgrades/003_update_property_creation.sql
 schema/upgrades/004_add_guest_is_active.sql
+schema/upgrades/005_add_guest_documents.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
@@ -100,11 +101,17 @@ examples/
 ├── 03_triggers_and_auditing.sql
 ├── 04_error_handling_and_logging.sql
 ├── 05_advanced_types.sql
-└── 06_jsonb.sql
+├── 06_jsonb.sql
+├── 07_property_codes.sql
+├── 08_guest_soft_delete.sql
+└── 09_guest_documents.sql
 ```
 
 Guest soft-delete behavior and reservation-history preservation are verified by
 `examples/08_guest_soft_delete.sql`.
+
+Guest document normalization, consistency, and uniqueness are verified by
+`examples/09_guest_documents.sql`.
 
 ### Example Workflow
 
