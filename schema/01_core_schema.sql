@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS error_log CASCADE;
 DROP TABLE IF EXISTS reservation_status_audit CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS properties CASCADE;
 DROP TABLE IF EXISTS guests CASCADE;
 DROP TABLE IF EXISTS discounts CASCADE;
@@ -13,6 +14,27 @@ DROP SEQUENCE IF EXISTS property_code_number_seq;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 CREATE SEQUENCE property_code_number_seq;
+
+
+CREATE TABLE users (
+    user_id       BIGSERIAL PRIMARY KEY,
+    user_code     VARCHAR(30) NOT NULL,
+    email         VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name     VARCHAR(100) NOT NULL,
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMPTZ,
+
+    CONSTRAINT uq_users_user_code
+        UNIQUE (user_code),
+
+    CONSTRAINT uq_users_email
+        UNIQUE (email),
+
+    CONSTRAINT chk_users_user_code_format
+        CHECK (user_code ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$')
+);
 
 
 CREATE TABLE guests (
@@ -140,6 +162,8 @@ CREATE TABLE reservations (
 
     property_id         BIGINT NOT NULL,
 
+    created_by_user_id  BIGINT NOT NULL,
+
     check_in_date       DATE NOT NULL,
 
     check_out_date      DATE NOT NULL,
@@ -174,6 +198,10 @@ CREATE TABLE reservations (
         FOREIGN KEY (property_id)
         REFERENCES properties(property_id),
 
+    CONSTRAINT fk_reservations_created_by_user
+        FOREIGN KEY (created_by_user_id)
+        REFERENCES users(user_id),
+
     CONSTRAINT chk_reservation_dates
         CHECK (check_out_date > check_in_date)
 );
@@ -185,6 +213,9 @@ EXCLUDE USING gist (
     daterange(check_in_date, check_out_date, '[)') WITH &&
 )
 WHERE (status IN ('PENDING', 'CONFIRMED'));
+
+CREATE INDEX idx_reservations_created_by_user_id
+    ON reservations(created_by_user_id);
 
 CREATE TABLE payments (
     payment_id          BIGSERIAL PRIMARY KEY,

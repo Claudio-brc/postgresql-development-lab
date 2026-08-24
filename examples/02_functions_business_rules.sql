@@ -100,6 +100,7 @@ SELECT calculate_booking_total(
 --   p_property_id BIGINT   - Property identifier.
 --   p_check_in DATE        - Reservation check-in date.
 --   p_check_out DATE       - Reservation check-out date.
+--   p_created_by_user_id BIGINT - Application user creating the reservation.
 --
 -- Returns:
 --   The ID of the newly created reservation as BIGINT.
@@ -110,7 +111,8 @@ SELECT create_reservation(
     1,
     1,
     DATE '2026-08-10',
-    DATE '2026-08-17'
+    DATE '2026-08-17',
+    (SELECT user_id FROM users WHERE user_code = 'CALVAREZ')
 );
 
 
@@ -128,6 +130,7 @@ SELECT create_reservation(
 --   p_check_out DATE                  - Reservation check-out date.
 --   p_payment_amount NUMERIC(12,2)    - Payment amount for the reservation.
 --   p_payment_method VARCHAR(30)      - Payment method.
+--   p_created_by_user_id BIGINT       - Application user creating the reservation.
 --
 -- Returns:
 --   The ID of the confirmed reservation as BIGINT.
@@ -141,7 +144,8 @@ SELECT process_booking(
     DATE '2026-08-18',
     DATE '2026-08-20',
     240.00,
-    'CREDIT_CARD'
+    'CREDIT_CARD',
+    (SELECT user_id FROM users WHERE user_code = 'CALVAREZ')
 );
 
 -- Function: cancel_reservation()

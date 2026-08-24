@@ -30,6 +30,11 @@ BEFORE UPDATE ON guests
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at();
 
+CREATE OR REPLACE TRIGGER trg_users_update_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
 CREATE OR REPLACE TRIGGER trg_properties_update_updated_at
 BEFORE UPDATE ON properties
 FOR EACH ROW
@@ -44,6 +49,7 @@ CREATE OR REPLACE TRIGGER trg_payments_update_updated_at
 BEFORE UPDATE ON payments
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at();
+
 
 
 ------------------------------------------------------------

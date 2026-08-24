@@ -2,7 +2,8 @@ CREATE OR REPLACE FUNCTION create_reservation(
     p_guest_id    BIGINT,
     p_property_id BIGINT,
     p_check_in    DATE,
-    p_check_out   DATE
+    p_check_out   DATE,
+    p_created_by_user_id BIGINT
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -43,7 +44,8 @@ BEGIN
         check_in_date,
         check_out_date,
         total_amount,
-        status
+        status,
+        created_by_user_id
     )
     VALUES (
         p_guest_id,
@@ -51,7 +53,8 @@ BEGIN
         p_check_in,
         p_check_out,
         v_total_amount,
-        'PENDING'
+        'PENDING',
+        p_created_by_user_id
     )
     RETURNING reservation_id
     INTO v_reservation_id;

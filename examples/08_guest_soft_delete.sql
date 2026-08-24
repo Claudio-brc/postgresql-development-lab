@@ -8,6 +8,7 @@ DECLARE
     v_guest_id       BIGINT;
     v_property_id    BIGINT;
     v_reservation_id BIGINT;
+    v_user_id        BIGINT;
 BEGIN
     INSERT INTO guests (full_name, email)
     VALUES ('Soft Delete Example', 'soft-delete-example@example.com')
@@ -27,17 +28,28 @@ BEGIN
         RAISE EXCEPTION 'The example requires at least one seeded property';
     END IF;
 
+    SELECT user_id
+    INTO v_user_id
+    FROM users
+    WHERE user_code = 'CALVAREZ';
+
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'The example requires the CALVAREZ application user';
+    END IF;
+
     INSERT INTO reservations (
         guest_id,
         property_id,
         check_in_date,
-        check_out_date
+        check_out_date,
+        created_by_user_id
     )
     VALUES (
         v_guest_id,
         v_property_id,
         DATE '2099-01-01',
-        DATE '2099-01-02'
+        DATE '2099-01-02',
+        v_user_id
     )
     RETURNING reservation_id INTO v_reservation_id;
 

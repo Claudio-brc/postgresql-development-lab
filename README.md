@@ -81,6 +81,7 @@ schema/upgrades/002_add_property_code.sql
 schema/upgrades/003_update_property_creation.sql
 schema/upgrades/004_add_guest_is_active.sql
 schema/upgrades/005_add_guest_documents.sql
+schema/upgrades/006_add_application_users.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
@@ -112,6 +113,15 @@ Guest soft-delete behavior and reservation-history preservation are verified by
 
 Guest document normalization, consistency, and uniqueness are verified by
 `examples/09_guest_documents.sql`.
+
+Application users and reservation creator ownership are verified by
+`examples/10_application_users.sql`. Every reservation must reference the
+application user that created it; `guest_id` continues to identify the person
+staying or holding the reservation.
+
+The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
+explicit non-credential placeholder. Booking API/Auth is responsible for
+generating and managing real password hashes; PostgreSQL only stores them.
 
 ### Example Workflow
 

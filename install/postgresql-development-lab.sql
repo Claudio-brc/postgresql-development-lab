@@ -55,6 +55,7 @@ DROP TABLE IF EXISTS error_log CASCADE;
 DROP TABLE IF EXISTS reservation_status_audit CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS properties CASCADE;
 DROP TABLE IF EXISTS guests CASCADE;
 DROP TABLE IF EXISTS discounts CASCADE;
@@ -64,6 +65,27 @@ DROP SEQUENCE IF EXISTS property_code_number_seq;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 CREATE SEQUENCE property_code_number_seq;
+
+
+CREATE TABLE users (
+    user_id       BIGSERIAL PRIMARY KEY,
+    user_code     VARCHAR(30) NOT NULL,
+    email         VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name     VARCHAR(100) NOT NULL,
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMPTZ,
+
+    CONSTRAINT uq_users_user_code
+        UNIQUE (user_code),
+
+    CONSTRAINT uq_users_email
+        UNIQUE (email),
+
+    CONSTRAINT chk_users_user_code_format
+        CHECK (user_code ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$')
+);
 
 
 CREATE TABLE guests (
@@ -191,6 +213,8 @@ CREATE TABLE reservations (
 
     property_id         BIGINT NOT NULL,
 
+    created_by_user_id  BIGINT NOT NULL,
+
     check_in_date       DATE NOT NULL,
 
     check_out_date      DATE NOT NULL,
@@ -225,6 +249,10 @@ CREATE TABLE reservations (
         FOREIGN KEY (property_id)
         REFERENCES properties(property_id),
 
+    CONSTRAINT fk_reservations_created_by_user
+        FOREIGN KEY (created_by_user_id)
+        REFERENCES users(user_id),
+
     CONSTRAINT chk_reservation_dates
         CHECK (check_out_date > check_in_date)
 );
@@ -236,6 +264,9 @@ EXCLUDE USING gist (
     daterange(check_in_date, check_out_date, '[)') WITH &&
 )
 WHERE (status IN ('PENDING', 'CONFIRMED'));
+
+CREATE INDEX idx_reservations_created_by_user_id
+    ON reservations(created_by_user_id);
 
 CREATE TABLE payments (
     payment_id          BIGSERIAL PRIMARY KEY,
@@ -410,6 +441,23 @@ $$ LANGUAGE plpgsql;
 -- Schema: 02_seed_data
 ------------------------------------------------------------
 
+-- Development-only placeholder. Booking API/Auth will generate and manage
+-- real password hashes; PostgreSQL only stores the already-processed value.
+INSERT INTO users (
+    user_code,
+    email,
+    password_hash,
+    full_name,
+    is_active
+)
+VALUES (
+    'CALVAREZ',
+    'calvarez.brc@gmail.com',
+    '$development-only$not-a-real-password-hash',
+    'Claudio Alvarez',
+    TRUE
+);
+
 INSERT INTO guests (full_name, email)
 SELECT
     'Guest ' || n,
@@ -435,19 +483,39 @@ INSERT INTO reservations (
     check_in_date,
     check_out_date,
     status,
+    total_amount,
+    created_by_user_id
+)
+SELECT
+    seed_reservation.guest_id,
+    seed_reservation.property_id,
+    seed_reservation.check_in_date,
+    seed_reservation.check_out_date,
+    seed_reservation.status,
+    seed_reservation.total_amount,
+    users.user_id
+FROM (
+    VALUES
+        (1,1,DATE '2026-07-01',DATE '2026-07-05','CONFIRMED',480.00),
+        (2,2,DATE '2026-07-10',DATE '2026-07-15','CONFIRMED',750.00),
+        (3,3,DATE '2026-08-01',DATE '2026-08-04','PENDING',270.00),
+        (4,4,DATE '2026-08-10',DATE '2026-08-15','CONFIRMED',550.00),
+        (5,5,DATE '2026-09-01',DATE '2026-09-03','CANCELLED',360.00),
+        (6,1,DATE '2026-09-10',DATE '2026-09-15','CONFIRMED',600.00),
+        (7,6,DATE '2026-10-01',DATE '2026-10-04','PENDING',420.00),
+        (8,7,DATE '2026-10-10',DATE '2026-10-12','CONFIRMED',150.00),
+        (9,8,DATE '2026-11-01',DATE '2026-11-05','CONFIRMED',800.00),
+        (10,9,DATE '2026-11-15',DATE '2026-11-18','PENDING',480.00)
+) AS seed_reservation (
+    guest_id,
+    property_id,
+    check_in_date,
+    check_out_date,
+    status,
     total_amount
 )
-VALUES
-(1,1,'2026-07-01','2026-07-05','CONFIRMED',480.00),
-(2,2,'2026-07-10','2026-07-15','CONFIRMED',750.00),
-(3,3,'2026-08-01','2026-08-04','PENDING',270.00),
-(4,4,'2026-08-10','2026-08-15','CONFIRMED',550.00),
-(5,5,'2026-09-01','2026-09-03','CANCELLED',360.00),
-(6,1,'2026-09-10','2026-09-15','CONFIRMED',600.00),
-(7,6,'2026-10-01','2026-10-04','PENDING',420.00),
-(8,7,'2026-10-10','2026-10-12','CONFIRMED',150.00),
-(9,8,'2026-11-01','2026-11-05','CONFIRMED',800.00),
-(10,9,'2026-11-15','2026-11-18','PENDING',480.00);
+JOIN users
+    ON users.user_code = 'CALVAREZ';
 
 
 INSERT INTO payments (
@@ -944,7 +1012,8 @@ CREATE OR REPLACE FUNCTION create_reservation(
     p_guest_id    BIGINT,
     p_property_id BIGINT,
     p_check_in    DATE,
-    p_check_out   DATE
+    p_check_out   DATE,
+    p_created_by_user_id BIGINT
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -985,7 +1054,8 @@ BEGIN
         check_in_date,
         check_out_date,
         total_amount,
-        status
+        status,
+        created_by_user_id
     )
     VALUES (
         p_guest_id,
@@ -993,7 +1063,8 @@ BEGIN
         p_check_in,
         p_check_out,
         v_total_amount,
-        'PENDING'
+        'PENDING',
+        p_created_by_user_id
     )
     RETURNING reservation_id
     INTO v_reservation_id;
@@ -1001,6 +1072,7 @@ BEGIN
     RETURN v_reservation_id;
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -1013,7 +1085,8 @@ CREATE OR REPLACE FUNCTION process_booking(
     p_check_in       DATE,
     p_check_out      DATE,
     p_payment_amount NUMERIC(12,2),
-    p_payment_method VARCHAR(30)
+    p_payment_method VARCHAR(30),
+    p_created_by_user_id BIGINT
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -1036,7 +1109,8 @@ BEGIN
         p_guest_id,
         p_property_id,
         p_check_in,
-        p_check_out
+        p_check_out,
+        p_created_by_user_id
     );
 
     SELECT total_amount
@@ -1069,6 +1143,7 @@ BEGIN
     RETURN v_reservation_id;
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -1176,6 +1251,11 @@ BEFORE UPDATE ON guests
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at();
 
+CREATE OR REPLACE TRIGGER trg_users_update_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
 CREATE OR REPLACE TRIGGER trg_properties_update_updated_at
 BEFORE UPDATE ON properties
 FOR EACH ROW
@@ -1190,6 +1270,7 @@ CREATE OR REPLACE TRIGGER trg_payments_update_updated_at
 BEFORE UPDATE ON payments
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at();
+
 
 
 ------------------------------------------------------------
@@ -1287,7 +1368,8 @@ CREATE OR REPLACE FUNCTION try_create_reservation(
     p_guest_id    BIGINT,
     p_property_id BIGINT,
     p_check_in    DATE,
-    p_check_out   DATE
+    p_check_out   DATE,
+    p_created_by_user_id BIGINT
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -1297,19 +1379,21 @@ BEGIN
         p_guest_id,
         p_property_id,
         p_check_in,
-        p_check_out
+        p_check_out,
+        p_created_by_user_id
     );
 
 EXCEPTION
     WHEN foreign_key_violation THEN
         RAISE EXCEPTION
-            'Invalid guest or property identifier.';
+            'Invalid guest, property, or user identifier.';
 
     WHEN check_violation THEN
         RAISE EXCEPTION
             'Reservation data violates database constraints.';
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -1320,7 +1404,8 @@ CREATE OR REPLACE FUNCTION try_create_reservation_with_logging(
     p_guest_id    BIGINT,
     p_property_id BIGINT,
     p_check_in    DATE,
-    p_check_out   DATE
+    p_check_out   DATE,
+    p_created_by_user_id BIGINT
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -1333,7 +1418,8 @@ BEGIN
         p_guest_id,
         p_property_id,
         p_check_in,
-        p_check_out
+        p_check_out,
+        p_created_by_user_id
     );
 
 EXCEPTION

@@ -1,3 +1,20 @@
+-- Development-only placeholder. Booking API/Auth will generate and manage
+-- real password hashes; PostgreSQL only stores the already-processed value.
+INSERT INTO users (
+    user_code,
+    email,
+    password_hash,
+    full_name,
+    is_active
+)
+VALUES (
+    'CALVAREZ',
+    'calvarez.brc@gmail.com',
+    '$development-only$not-a-real-password-hash',
+    'Claudio Alvarez',
+    TRUE
+);
+
 INSERT INTO guests (full_name, email)
 SELECT
     'Guest ' || n,
@@ -23,19 +40,39 @@ INSERT INTO reservations (
     check_in_date,
     check_out_date,
     status,
+    total_amount,
+    created_by_user_id
+)
+SELECT
+    seed_reservation.guest_id,
+    seed_reservation.property_id,
+    seed_reservation.check_in_date,
+    seed_reservation.check_out_date,
+    seed_reservation.status,
+    seed_reservation.total_amount,
+    users.user_id
+FROM (
+    VALUES
+        (1,1,DATE '2026-07-01',DATE '2026-07-05','CONFIRMED',480.00),
+        (2,2,DATE '2026-07-10',DATE '2026-07-15','CONFIRMED',750.00),
+        (3,3,DATE '2026-08-01',DATE '2026-08-04','PENDING',270.00),
+        (4,4,DATE '2026-08-10',DATE '2026-08-15','CONFIRMED',550.00),
+        (5,5,DATE '2026-09-01',DATE '2026-09-03','CANCELLED',360.00),
+        (6,1,DATE '2026-09-10',DATE '2026-09-15','CONFIRMED',600.00),
+        (7,6,DATE '2026-10-01',DATE '2026-10-04','PENDING',420.00),
+        (8,7,DATE '2026-10-10',DATE '2026-10-12','CONFIRMED',150.00),
+        (9,8,DATE '2026-11-01',DATE '2026-11-05','CONFIRMED',800.00),
+        (10,9,DATE '2026-11-15',DATE '2026-11-18','PENDING',480.00)
+) AS seed_reservation (
+    guest_id,
+    property_id,
+    check_in_date,
+    check_out_date,
+    status,
     total_amount
 )
-VALUES
-(1,1,'2026-07-01','2026-07-05','CONFIRMED',480.00),
-(2,2,'2026-07-10','2026-07-15','CONFIRMED',750.00),
-(3,3,'2026-08-01','2026-08-04','PENDING',270.00),
-(4,4,'2026-08-10','2026-08-15','CONFIRMED',550.00),
-(5,5,'2026-09-01','2026-09-03','CANCELLED',360.00),
-(6,1,'2026-09-10','2026-09-15','CONFIRMED',600.00),
-(7,6,'2026-10-01','2026-10-04','PENDING',420.00),
-(8,7,'2026-10-10','2026-10-12','CONFIRMED',150.00),
-(9,8,'2026-11-01','2026-11-05','CONFIRMED',800.00),
-(10,9,'2026-11-15','2026-11-18','PENDING',480.00);
+JOIN users
+    ON users.user_code = 'CALVAREZ';
 
 
 INSERT INTO payments (
