@@ -39,7 +39,7 @@ SELECT update_property_metadata(
 );
 
 --------------------------------------------------------------------------------
--- Procedure: update_property_parking()
+-- Function: update_property_parking()
 --
 -- Description:
 -- Updates the parking amenity flag within the metadata JSONB document of a
@@ -58,7 +58,7 @@ SELECT update_property_metadata(
 -- - Uses jsonb_set() to replace the amenities object while preserving its
 --   existing values and changing only parking.
 -- - COALESCE ensures the operation works if metadata or amenities is missing.
--- - The procedure does not return any value; use SELECT or CALL to execute it.
+-- - The function returns VOID; use SELECT to execute it.
 --------------------------------------------------------------------------------
 
 SELECT update_property_parking(1, FALSE);

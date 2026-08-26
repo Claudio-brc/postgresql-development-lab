@@ -1,5 +1,7 @@
 -- Apply after 002_add_property_code.sql.
 
+BEGIN;
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -57,3 +59,5 @@ BEGIN
     RETURN v_property_id;
 END;
 $$;
+
+COMMIT;

@@ -84,7 +84,7 @@ SELECT create_property(
 --
 -- Returns:
 --   A RESERVATION_SUMMARY composite value containing the reservation details.
---   Returns NULL if the reservation is not found.
+--   Raises an exception if the reservation is not found.
 --------------------------------------------------------------------------------
 
 SELECT get_reservation_summary(

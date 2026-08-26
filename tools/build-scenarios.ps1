@@ -10,7 +10,7 @@
     Optional scenario folder name.
     Example:
         ./build-scenarios.ps1
-        ./build-scenarios.ps1 07_jsonb
+        ./build-scenarios.ps1 06_jsonb
 #>
 
 param(

@@ -98,14 +98,15 @@ After the installation completes, execute the scripts located in the `examples` 
 ```text
 examples/
 ├── 01_plpgsql_fundamentals.sql
-├── 02_business_rules.sql
+├── 02_functions_business_rules.sql
 ├── 03_triggers_and_auditing.sql
 ├── 04_error_handling_and_logging.sql
 ├── 05_advanced_types.sql
 ├── 06_jsonb.sql
 ├── 07_property_codes.sql
 ├── 08_guest_soft_delete.sql
-└── 09_guest_documents.sql
+├── 09_guest_documents.sql
+└── 10_application_users.sql
 ```
 
 Guest soft-delete behavior and reservation-history preservation are verified by
@@ -204,41 +205,63 @@ Examples of:
 
 ```
 .
+├── assets
+│ └── erd-1.png
+│
+├── docs
+│ ├── REQ-001-application-users.md
+│ └── repository-audit-2026-08-25.md
+│
 ├── examples
 │ ├── 01_plpgsql_fundamentals.sql
-│ ├── 02_business_rules.sql
+│ ├── 02_functions_business_rules.sql
 │ ├── 03_triggers_and_auditing.sql
 │ ├── 04_error_handling_and_logging.sql
 │ ├── 05_advanced_types.sql
-│ └── 06_jsonb.sql
+│ ├── 06_jsonb.sql
+│ ├── 07_property_codes.sql
+│ ├── 08_guest_soft_delete.sql
+│ ├── 09_guest_documents.sql
+│ └── 10_application_users.sql
 │
 ├── install
-│ ├── 01_schema.sql
-│ ├── 02_plpgsql_fundamentals.sql
-│ ├── 03_business_rules.sql
-│ ├── ...
+│ ├── 01_plpgsql_fundamentals.sql
+│ ├── 02_functions_business_rules.sql
+│ ├── 03_triggers_and_auditing.sql
+│ ├── 04_error_handling_and_logging.sql
+│ ├── 05_advanced_types.sql
+│ ├── 06_jsonb.sql
 │ └── postgresql-development-lab.sql
 │
 ├── schema
 │ ├── 00_custom_types.sql
 │ ├── 01_core_schema.sql
-│ └── 02_core_seed.sql
+│ ├── 02_seed_data.sql
+│ └── upgrades
+│     ├── 001_add_property_type.sql
+│     ├── 002_add_property_code.sql
+│     ├── 003_update_property_creation.sql
+│     ├── 004_add_guest_is_active.sql
+│     ├── 005_add_guest_documents.sql
+│     └── 006_add_application_users.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals
-│ │ ├── 01_validate_booking_dates.sql
-│ │ ├── 02_calculate_stay_cost.sql
-│ │ └── ...
-│ │
-│ ├── 02_business_rules
+│ ├── 02_functions_business_rules
 │ ├── 03_triggers_and_auditing
-│ ├── 04_error_handling
+│ ├── 04_error_handling_and_logging
 │ ├── 05_advanced_types
 │ └── 06_jsonb
 │
 ├── tools
-│ └── build-all.ps1
+│ ├── build-all.ps1
+│ └── build-scenarios.ps1
 │
+├── utils
+│ ├── get_setting.sql
+│ └── get_table_columns.sql
+│
+├── docker-compose.yml
 └── README.md
 ```
 

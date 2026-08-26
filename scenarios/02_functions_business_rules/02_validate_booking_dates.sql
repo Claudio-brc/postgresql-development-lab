@@ -27,7 +27,7 @@ BEGIN
     v_max_stay := get_setting('max_stay_nights')::INTEGER;
 
     IF v_max_stay < (p_check_out_date - p_check_in_date) THEN
-        RAISE EXCEPTION 'The maximum stay is 30 nights.';
+        RAISE EXCEPTION 'The maximum stay is % nights.', v_max_stay;
     END IF;
 
     RETURN TRUE;

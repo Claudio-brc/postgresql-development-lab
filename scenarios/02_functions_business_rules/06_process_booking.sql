@@ -54,7 +54,7 @@ BEGIN
         p_payment_amount,
         p_payment_method,
         'PAID',
-        CURRENT_DATE
+        CURRENT_TIMESTAMP
     );
 
     PERFORM confirm_reservation(v_reservation_id);
