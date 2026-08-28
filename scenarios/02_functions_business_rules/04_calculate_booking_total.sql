@@ -21,6 +21,6 @@ BEGIN
         v_total_base,
         p_check_out - p_check_in,
         p_check_in
-    );
+    )::NUMERIC(16,6);
 END;
 $$;

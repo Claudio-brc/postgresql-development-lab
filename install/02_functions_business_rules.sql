@@ -52,12 +52,15 @@ BEGIN
     LIMIT 1;
 
     IF v_discount_percent IS NULL THEN
-        RETURN p_total_amount;
+        RETURN p_total_amount::NUMERIC(16,6);
     END IF;
 
-    RETURN p_total_amount * (1 - v_discount_percent / 100);
+    RETURN (
+        p_total_amount * (1 - v_discount_percent / 100)
+    )::NUMERIC(16,6);
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -93,12 +96,13 @@ BEGIN
     v_max_stay := get_setting('max_stay_nights')::INTEGER;
 
     IF v_max_stay < (p_check_out_date - p_check_in_date) THEN
-        RAISE EXCEPTION 'The maximum stay is 30 nights.';
+        RAISE EXCEPTION 'The maximum stay is % nights.', v_max_stay;
     END IF;
 
     RETURN TRUE;
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -169,9 +173,10 @@ BEGIN
         v_total_base,
         p_check_out - p_check_in,
         p_check_in
-    );
+    )::NUMERIC(16,6);
 END;
 $$;
+
 
 
 ------------------------------------------------------------
@@ -254,7 +259,7 @@ CREATE OR REPLACE FUNCTION process_booking(
     p_property_id    BIGINT,
     p_check_in       DATE,
     p_check_out      DATE,
-    p_payment_amount NUMERIC(12,2),
+    p_payment_amount NUMERIC,
     p_payment_method VARCHAR(30),
     p_created_by_user_id BIGINT
 )
@@ -305,7 +310,7 @@ BEGIN
         p_payment_amount,
         p_payment_method,
         'PAID',
-        CURRENT_DATE
+        CURRENT_TIMESTAMP
     );
 
     PERFORM confirm_reservation(v_reservation_id);

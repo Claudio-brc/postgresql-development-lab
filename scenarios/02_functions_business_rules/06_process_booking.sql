@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION process_booking(
     p_property_id    BIGINT,
     p_check_in       DATE,
     p_check_out      DATE,
-    p_payment_amount NUMERIC(12,2),
+    p_payment_amount NUMERIC,
     p_payment_method VARCHAR(30),
     p_created_by_user_id BIGINT
 )

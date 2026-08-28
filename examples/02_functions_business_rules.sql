@@ -11,7 +11,7 @@
 --   p_check_in DATE        - Reservation check-in date.
 --
 -- Returns:
---   The discounted booking amount as NUMERIC.
+--   The discounted booking amount as NUMERIC(16,6).
 --   Returns the original amount if no applicable discount is found.
 --   Raises an exception if the input values are invalid.
 --------------------------------------------------------------------------------
@@ -76,7 +76,7 @@ SELECT can_guest_book(
 --   p_check_out DATE     - Reservation check-out date.
 --
 -- Returns:
---   The final booking amount as NUMERIC.
+--   The final booking amount as NUMERIC(16,6).
 --   Raises an exception if the booking dates are invalid or the property
 --   cannot be processed.
 --------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ SELECT create_reservation(
 --   p_property_id BIGINT              - Property identifier.
 --   p_check_in DATE                   - Reservation check-in date.
 --   p_check_out DATE                  - Reservation check-out date.
---   p_payment_amount NUMERIC(12,2)    - Payment amount for the reservation.
+--   p_payment_amount NUMERIC          - Payment amount for the reservation.
 --   p_payment_method VARCHAR(30)      - Payment method.
 --   p_created_by_user_id BIGINT       - Application user creating the reservation.
 --

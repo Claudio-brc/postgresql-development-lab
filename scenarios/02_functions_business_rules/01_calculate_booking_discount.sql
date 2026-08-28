@@ -40,9 +40,11 @@ BEGIN
     LIMIT 1;
 
     IF v_discount_percent IS NULL THEN
-        RETURN p_total_amount;
+        RETURN p_total_amount::NUMERIC(16,6);
     END IF;
 
-    RETURN p_total_amount * (1 - v_discount_percent / 100);
+    RETURN (
+        p_total_amount * (1 - v_discount_percent / 100)
+    )::NUMERIC(16,6);
 END;
 $$;

@@ -26,6 +26,6 @@ BEGIN
         RAISE EXCEPTION 'Property % not found.', p_property_id;
     END IF;
 
-    RETURN v_nights_quantity * v_total_cost;
+    RETURN (v_nights_quantity * v_total_cost)::NUMERIC(16,6);
 END;
 $$;

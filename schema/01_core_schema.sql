@@ -95,7 +95,7 @@ CREATE TABLE properties (
                     CHECK (property_code <> '')
                     CHECK (property_code ~ '^[A-Z]{3}-[0-9]{4}$'),
 
-    nightly_rate    NUMERIC(12,2)
+    nightly_rate    NUMERIC(16,6)
                      NOT NULL
                      CHECK (nightly_rate >= 0),
 
@@ -179,7 +179,7 @@ CREATE TABLE reservations (
                             )
                         ),
 
-    total_amount        NUMERIC(12,2)
+    total_amount        NUMERIC(16,6)
                         NOT NULL
                         DEFAULT 0
                         CHECK (total_amount >= 0),
@@ -222,7 +222,7 @@ CREATE TABLE payments (
 
     reservation_id      BIGINT NOT NULL,
 
-    payment_amount      NUMERIC(12,2)
+    payment_amount      NUMERIC(16,6)
                         NOT NULL
                         CHECK (payment_amount > 0),
 
@@ -328,7 +328,7 @@ CREATE TABLE services
     service_id BIGSERIAL PRIMARY KEY,
     service_name VARCHAR(100) NOT NULL,
     description TEXT,
-    price NUMERIC(10,2) NOT NULL,
+    price NUMERIC(14,6) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -343,7 +343,7 @@ CREATE TABLE reservation_services
     service_id BIGINT NOT NULL,
 
     quantity INTEGER NOT NULL DEFAULT 1,
-    unit_price NUMERIC(10,2) NOT NULL,
+    unit_price NUMERIC(14,6) NOT NULL,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

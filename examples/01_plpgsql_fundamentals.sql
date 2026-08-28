@@ -6,7 +6,7 @@
 --   rate and the number of nights between the check-in and check-out dates.
 --
 -- Returns:
---   The total stay cost as NUMERIC.
+--   The total stay cost as NUMERIC(16,6).
 --   Raises an exception if the dates are invalid or the property does not exist.
 --------------------------------------------------------------------------------
 

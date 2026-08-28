@@ -82,6 +82,7 @@ schema/upgrades/003_update_property_creation.sql
 schema/upgrades/004_add_guest_is_active.sql
 schema/upgrades/005_add_guest_documents.sql
 schema/upgrades/006_add_application_users.sql
+schema/upgrades/007_increase_monetary_precision.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
