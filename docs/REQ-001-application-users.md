@@ -1,22 +1,27 @@
-# REQ-001 — Usuarios de la aplicación
+# REQ-001 — Application users
 
-Estado: implementado.
+Status: implemented.
 
-## Objetivo
+## Objective
 
-Incorporar `public.users` y garantizar que toda reserva identifique al usuario de Booking API que la creó, manteniendo separados estos conceptos:
+Introduce `public.users` and ensure that every reservation identifies
+the Booking API user who created it, while keeping the following
+concepts separate:
 
 ```text
 reservations.guest_id
-  → persona alojada o titular de la reserva
+  → person staying at the property or reservation holder
 
 reservations.created_by_user_id
-  → usuario de Booking API que creó la reserva
+  → Booking API user who created the reservation
 ```
 
-No se incorporan autenticación, login, JWT, hashing en PostgreSQL, roles, permisos, sesiones, refresh tokens ni una relación User ↔ Guest. Booking API no forma parte del cambio.
+Authentication, login, JWT, PostgreSQL-side password hashing, roles,
+permissions, sessions, refresh tokens, and a User ↔ Guest relationship
+are not included in this requirement. Booking API itself is also outside
+the scope of this change.
 
-## Modelo de `public.users`
+## `public.users` model
 
 ```sql
 CREATE TABLE public.users (
@@ -36,55 +41,63 @@ CREATE TABLE public.users (
 );
 ```
 
-`password_hash` usa `VARCHAR(255)` para admitir representaciones codificadas de distintos algoritmos sin acoplar el esquema a uno de ellos. PostgreSQL sólo almacena el valor previamente procesado.
+`password_hash` uses `VARCHAR(255)` to support encoded representations
+produced by different hashing algorithms without coupling the schema to
+a specific one. PostgreSQL only stores the value after it has been
+processed by the application.
 
-## Usuario inicial
+## Initial user
 
-La instalación y el upgrade crean el usuario de aplicación:
+The clean installation and upgrade create the following application
+user:
 
 - `user_code = 'CALVAREZ'`;
 - `full_name = 'Claudio Alvarez'`;
 - `email = 'calvarez.brc@gmail.com'`;
 - `is_active = TRUE`.
 
-El seed almacena un placeholder explícitamente ficticio en `password_hash`. No es una contraseña ni una credencial válida. La generación y gestión del hash real corresponde a Booking API/Auth.
+The seed stores an explicitly fictitious placeholder in `password_hash`.
+It is neither a password nor a valid credential. Generating and managing
+the actual password hash is the responsibility of Booking API/Auth.
 
-El `user_id` nunca se asume igual a `1`; toda relación de seed o migración lo resuelve mediante `user_code = 'CALVAREZ'`.
+The `user_id` is never assumed to be `1`; every seed or migration
+relationship resolves it through `user_code = 'CALVAREZ'`.
 
-## Relación obligatoria con reservas
+## Mandatory reservation relationship
 
-El estado final es:
+The final state is:
 
 ```sql
 created_by_user_id BIGINT NOT NULL
 ```
 
-con:
+with:
 
-- FK `fk_reservations_created_by_user` hacia `users(user_id)`;
-- índice `idx_reservations_created_by_user_id`;
-- sin `ON DELETE CASCADE`.
+- FK `fk_reservations_created_by_user` referencing `users(user_id)`;
+- index `idx_reservations_created_by_user_id`;
+- no `ON DELETE CASCADE`.
 
-## Estrategia de migración
+## Migration strategy
 
-El upgrade se ejecuta dentro de una transacción y sigue este orden:
+The upgrade runs inside a transaction and follows this order:
 
-1. crear `public.users`;
-2. insertar `CALVAREZ`;
-3. agregar `created_by_user_id` temporalmente nullable;
-4. resolver el `user_id` de `CALVAREZ` por `user_code`;
-5. asignarlo a reservas existentes sin creador;
-6. abortar si queda algún `NULL`;
-7. aplicar `NOT NULL`;
-8. crear la FK y el índice;
-9. instalar las nuevas firmas de funciones;
-10. retirar las firmas antiguas sin usar `CASCADE`.
+1. create `public.users`;
+2. insert `CALVAREZ`;
+3. add `created_by_user_id` as temporarily nullable;
+4. resolve the `user_id` of `CALVAREZ` through `user_code`;
+5. assign it to existing reservations without a creator;
+6. abort if any `NULL` values remain;
+7. apply `NOT NULL`;
+8. create the FK and index;
+9. install the new function signatures;
+10. remove the old signatures without using `CASCADE`.
 
-La instalación limpia crea directamente el modelo final y sus seeds ya incluyen el creador obligatorio.
+A clean installation creates the final model directly, and its seeds
+already include the mandatory creator.
 
-## Funciones
+## Functions
 
-El estado final contiene una única firma de cada función afectada:
+The final state contains a single signature for each affected function:
 
 ```text
 create_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT)
@@ -93,11 +106,14 @@ try_create_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT)
 try_create_reservation_with_logging(BIGINT, BIGINT, DATE, DATE, BIGINT)
 ```
 
-`p_created_by_user_id` es obligatorio, no tiene default y se propaga usando la identidad técnica `users.user_id`. No se mantienen wrappers ni overloads históricos.
+`p_created_by_user_id` is mandatory, has no default value, and is
+propagated using the technical identifier `users.user_id`. No historical
+wrappers or overloads are retained.
 
-`try_create_reservation` traduce una violación de FK como un identificador inválido de guest, property o user.
+`try_create_reservation` translates a foreign key violation into an
+invalid guest, property, or user identifier error.
 
-## Archivos fuente
+## Source files
 
 - `schema/01_core_schema.sql`.
 - `schema/02_seed_data.sql`.
@@ -112,23 +128,26 @@ try_create_reservation_with_logging(BIGINT, BIGINT, DATE, DATE, BIGINT)
 - `examples/10_application_users.sql`.
 - `README.md`.
 
-Los archivos de `install/` se regeneran únicamente mediante `tools/build-all.ps1`.
+Files under `install/` are regenerated exclusively through
+`tools/build-all.ps1`.
 
-## Verificaciones
+## Verification
 
-La validación debe comprobar:
+Validation must verify:
 
-1. existencia y estado activo de `CALVAREZ`;
-2. generación automática de `user_id`;
-3. obligatoriedad, formato y unicidad de `user_code`;
-4. unicidad de email;
-5. conservación del `password_hash` suministrado;
-6. independencia de Guest y User;
-7. relación User → Reservation;
-8. cero reservas con `created_by_user_id IS NULL`;
-9. FK válida hacia `users`;
-10. rechazo de reservas sin creador o con un `user_id` inexistente;
-11. una sola firma vigente por función afectada;
-12. ausencia de wrappers de compatibilidad.
+1. existence and active status of `CALVAREZ`;
+2. automatic `user_id` generation;
+3. mandatory, formatted, and unique `user_code`;
+4. email uniqueness;
+5. preservation of the supplied `password_hash`;
+6. independence between Guest and User;
+7. User → Reservation relationship;
+8. zero reservations with `created_by_user_id IS NULL`;
+9. valid FK referencing `users`;
+10. rejection of reservations without a creator or with a nonexistent
+    `user_id`;
+11. exactly one active signature for each affected function;
+12. absence of compatibility wrappers.
 
-La instalación limpia y el upgrade desde el esquema anterior deben validarse por separado en bases descartables.
+Clean installation and upgrade from the previous schema must be
+validated separately using disposable databases.
