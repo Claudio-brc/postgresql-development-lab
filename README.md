@@ -83,6 +83,7 @@ schema/upgrades/004_add_guest_is_active.sql
 schema/upgrades/005_add_guest_documents.sql
 schema/upgrades/006_add_application_users.sql
 schema/upgrades/007_increase_monetary_precision.sql
+schema/upgrades/008_reservation_economic_lifecycle.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
@@ -107,7 +108,8 @@ examples/
 ├── 07_property_codes.sql
 ├── 08_guest_soft_delete.sql
 ├── 09_guest_documents.sql
-└── 10_application_users.sql
+├── 10_application_users.sql
+└── 11_reservation_economic_lifecycle.sql
 ```
 
 Guest soft-delete behavior and reservation-history preservation are verified by
@@ -120,6 +122,19 @@ Application users and reservation creator ownership are verified by
 `examples/10_application_users.sql`. Every reservation must reference the
 application user that created it; `guest_id` continues to identify the person
 staying or holding the reservation.
+
+The integrated accommodation, service-snapshot, and payment lifecycle is
+verified by `examples/11_reservation_economic_lifecycle.sql`. Reservation
+totals, paid amounts, balances, and payments retain six-decimal precision. The
+`0.01` threshold is used only as a settlement tolerance; monetary values are
+not rounded to two decimals before comparison.
+
+Use `replace_reservation_services` as the supported service write path. It
+updates the persisted reservation total while preserving prior payment rows.
+`process_reservation_payment` settles a complete positive balance, and the
+service-aware overloads of `create_reservation` and `process_booking` accept a
+JSONB service collection. Existing signatures remain available as
+compatibility wrappers.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for
@@ -211,7 +226,8 @@ Examples of:
 │
 ├── docs
 │ ├── REQ-001-application-users.md
-│ └── repository-audit-2026-08-25.md
+│ ├── REQ-002-monetary-precision.md
+│ └── REQ-003-reservation-economic-lifecycle.md
 │
 ├── examples
 │ ├── 01_plpgsql_fundamentals.sql
@@ -223,7 +239,8 @@ Examples of:
 │ ├── 07_property_codes.sql
 │ ├── 08_guest_soft_delete.sql
 │ ├── 09_guest_documents.sql
-│ └── 10_application_users.sql
+│ ├── 10_application_users.sql
+│ └── 11_reservation_economic_lifecycle.sql
 │
 ├── install
 │ ├── 01_plpgsql_fundamentals.sql
@@ -232,6 +249,7 @@ Examples of:
 │ ├── 04_error_handling_and_logging.sql
 │ ├── 05_advanced_types.sql
 │ ├── 06_jsonb.sql
+│ ├── 07_reservation_economic_lifecycle.sql
 │ └── postgresql-development-lab.sql
 │
 ├── schema
@@ -244,7 +262,9 @@ Examples of:
 │     ├── 003_update_property_creation.sql
 │     ├── 004_add_guest_is_active.sql
 │     ├── 005_add_guest_documents.sql
-│     └── 006_add_application_users.sql
+│     ├── 006_add_application_users.sql
+│     ├── 007_increase_monetary_precision.sql
+│     └── 008_reservation_economic_lifecycle.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals
@@ -252,7 +272,8 @@ Examples of:
 │ ├── 03_triggers_and_auditing
 │ ├── 04_error_handling_and_logging
 │ ├── 05_advanced_types
-│ └── 06_jsonb
+│ ├── 06_jsonb
+│ └── 07_reservation_economic_lifecycle
 │
 ├── tools
 │ ├── build-all.ps1
@@ -278,6 +299,7 @@ Examples of:
 | Error Handling | ✅ |
 | Advanced Types | ✅ |
 | JSONB | ✅ |
+| Reservation Economic Lifecycle | ✅ |
 
 
 ---
