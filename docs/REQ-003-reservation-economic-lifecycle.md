@@ -1,6 +1,6 @@
 # REQ-003 — Reservation economic lifecycle
 
-Status: implemented and validated on 2026-09-02.
+Status: implemented; creation API refactored and validated on 2026-09-04.
 
 ## Objective
 
@@ -140,38 +140,44 @@ This distinction makes omitted optional input safe and gives callers an
 explicit way to clear services. It intentionally normalizes the inconsistent
 legacy overload behavior at the later evolution point.
 
-Both existing `add_services_to_reservation` overloads are redefined in
-scenario 07 as compatibility wrappers around the canonical replacement
-operation. The ARRAY wrapper first groups repeated identifiers into the
-existing `{service_id, quantity}` JSONB representation. Both wrappers
-therefore adopt the normalized `NULL` and empty-collection semantics and
-continue returning `VOID`.
+The earlier `add_services_to_reservation` overloads remain in scenarios 05 and
+06 as progressive teaching history. Scenario 07 removes them from the final
+API: `replace_reservation_services` is the single supported service write path,
+with explicit JSONB quantities and a returned economic-state projection.
 
 ### Reservation creation
 
-Scenario 07 adds this overload:
+Scenario 07 renames the lower-level operation to:
 
 ```text
-create_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT, JSONB) -> BIGINT
+initialize_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT)        -> BIGINT
+initialize_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT, JSONB) -> BIGINT
 ```
 
-The final JSONB argument represents optional services. The existing five-
-argument signature remains available as a wrapper that passes `NULL` to
-the evolved function. A separate overload is preferred to a default argument:
-it keeps existing calls unambiguous and preserves the established public
-signature.
+It validates dates, property availability, guest eligibility, and creator
+ownership; inserts the `PENDING` reservation; invokes canonical service
+replacement when services are supplied; and persists the complete discounted
+accommodation-plus-snapshot total. PostgreSQL function execution provides
+atomicity: any validation, insert, or service failure rolls back the statement.
 
-The evolved function reuses the existing date, availability, guest, and
-creator validation path; inserts the `PENDING` reservation; invokes the common
-service-replacement logic when services are supplied; and persists the final
-total. With `NULL` or `[]`, its result is the current accommodation-only
-behavior. PostgreSQL function execution provides atomicity: any validation,
-insert, or service-assignment failure rolls back the complete statement.
+The public operation is now `create_reservation`, with four unambiguous forms:
+
+```text
+create_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT)
+create_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT, JSONB)
+create_reservation(BIGINT, BIGINT, DATE, DATE, NUMERIC, VARCHAR, BIGINT)
+create_reservation(BIGINT, BIGINT, DATE, DATE, NUMERIC, VARCHAR, BIGINT, JSONB)
+```
+
+The five- and six-argument forms initialize without payment and return a
+`PENDING` reservation. The seven- and eight-argument forms preserve the former
+`process_booking` parameter order and optionally settle the initialized
+reservation. Both payment fields must be absent or supplied together.
 
 The error-handling wrappers from scenario 04 did not need new signatures for
-this requirement. Their existing five-argument calls will continue through the
-compatibility `create_reservation` wrapper. Service-aware error translation can
-be added in a future error-handling evolution if required.
+this requirement. Their existing five-argument calls continue through the
+public unpaid `create_reservation` form. Service-aware error translation can be
+added in a future error-handling evolution if required.
 
 ### Payment processing
 
@@ -188,24 +194,16 @@ payment to match the complete positive outstanding balance using the existing
 `0.01` settlement tolerance. It then inserts a new `PAID` payment. It confirms a
 `PENDING` reservation and leaves a `CONFIRMED` reservation confirmed.
 
-Requiring settlement of the complete balance preserves the existing
-`process_booking` behavior and supports the required follow-up payment without
+Requiring settlement of the complete balance preserves the approved booking
+behavior and supports the required follow-up payment without
 expanding this change into partial-payment allocation or accounting. The
 checkout-date restriction applies to changing services, not to settling an
 already established balance.
 
-The implementation also adds a service-aware overload:
-
-```text
-process_booking(
-  BIGINT, BIGINT, DATE, DATE, NUMERIC, VARCHAR, BIGINT, JSONB
-) -> BIGINT
-```
-
-It creates the reservation with optional services and delegates payment
-creation and confirmation to `process_reservation_payment`. The existing
-seven-argument `process_booking` signature remains as a wrapper passing
-`NULL` services, preserving its convenience behavior and existing callers.
+Paid `create_reservation` delegates payment creation and confirmation to
+`process_reservation_payment`. The obsolete `process_booking` overloads are
+removed from the final API, but their scenario 02 definition remains as
+progressive history.
 
 No existing payment is updated when services change. A fully paid,
 `CONFIRMED` reservation may therefore remain `CONFIRMED` with a positive
@@ -254,10 +252,10 @@ domain functions as the supported write path.
 - `scenarios/07_reservation_economic_lifecycle/02_calculate_reservation_amount_paid.sql`.
 - `scenarios/07_reservation_economic_lifecycle/03_calculate_reservation_balance.sql`.
 - `scenarios/07_reservation_economic_lifecycle/04_replace_reservation_services.sql`.
-- `scenarios/07_reservation_economic_lifecycle/05_evolve_add_services_to_reservation.sql`.
-- `scenarios/07_reservation_economic_lifecycle/06_evolve_create_reservation.sql`.
+- `scenarios/07_reservation_economic_lifecycle/05_remove_obsolete_service_wrappers.sql`.
+- `scenarios/07_reservation_economic_lifecycle/06_initialize_reservation.sql`.
 - `scenarios/07_reservation_economic_lifecycle/07_process_reservation_payment.sql`.
-- `scenarios/07_reservation_economic_lifecycle/08_evolve_process_booking.sql`.
+- `scenarios/07_reservation_economic_lifecycle/08_create_reservation.sql`.
 - `schema/upgrades/008_reservation_economic_lifecycle.sql` — transactional,
   idempotence-aware upgrade of functions for an existing database.
 - `examples/11_reservation_economic_lifecycle.sql` — executable assertions and
@@ -289,10 +287,11 @@ Generated files were not edited manually.
 2. Add the canonical JSONB replacement function with reservation locking,
    whole-document validation, snapshot insertion, total update, and economic
    state return.
-3. Redefine the ARRAY and JSONB legacy overloads as compatibility adapters.
-4. Add service-aware reservation creation and retain the five-argument wrapper.
+3. Remove the superseded ARRAY and JSONB service wrapper names from the final API.
+4. Rename the validated `PENDING` creation operation to `initialize_reservation`.
 5. Extract existing-reservation payment processing.
-6. Add service-aware `process_booking` and retain its existing wrapper.
+6. Evolve `process_booking` into public `create_reservation`, with paid and
+   unpaid service-aware forms, and remove the obsolete name.
 7. Add upgrade 008 with the same final function definitions and safe signature
    handling without `CASCADE`.
 8. Add transactional examples and assertions.
@@ -306,12 +305,13 @@ Generated files were not edited manually.
 relative dates around `CURRENT_DATE`, a transaction, and PL/pgSQL assertions so
 it remains reproducible and rolls back its data. It covers:
 
-1. creation without services through the old and evolved signatures;
-2. creation with one or more JSONB services;
-3. accommodation plus snapshot service totals at six-decimal precision;
+1. unpaid creation without services (`PENDING`, accommodation total);
+2. unpaid creation with JSONB services (`PENDING`, complete total);
+3. paid creation with services (`CONFIRMED`, complete total, paid amount, and
+   zero balance);
 4. replacement, addition, and explicit clearing with `[]`;
-5. the documented `NULL` no-op behavior for both compatibility overloads;
-6. ARRAY duplicate consolidation and JSONB duplicate rejection;
+5. the documented canonical `NULL` no-op behavior;
+6. JSONB duplicate rejection;
 7. paid amount derived only from `PAID` rows, with `PENDING` and `REFUNDED`
    excluded;
 8. balance derivation without persisted redundant columns;
@@ -325,15 +325,19 @@ it remains reproducible and rolls back its data. It covers:
     is today;
 14. rejection for `CANCELLED` reservations;
 15. atomic rollback when any service item is invalid;
-16. full-balance and payment-method validation, plus rejection of overpayment
-    and payment when no positive balance exists;
-17. legacy and new function signatures and return contracts;
+16. full-balance and payment-method validation, including atomic rejection of
+    partial payment and overpayment during creation;
+17. final function signatures and absence of obsolete wrappers;
 18. clean installation and upgrade from schema version 007.
+
+Expected-failure assertions catch `raise_exception` and verify the exact domain
+message. They do not use unrestricted `WHEN OTHERS`, so an unrelated failure
+cannot satisfy the test accidentally.
 
 ### Verification evidence
 
-Validation was completed on PostgreSQL 17 in two uniquely named disposable
-databases:
+Validation was rerun on PostgreSQL 17 on 2026-09-04 in two uniquely named
+disposable databases:
 
 - Clean install: the regenerated
   `install/postgresql-development-lab.sql` completed with
@@ -345,25 +349,25 @@ databases:
   `ON_ERROR_STOP=1`, then passed the same transactional assertions.
 - Upgrade repeatability: upgrade 008 was applied a second time successfully.
 - Historical preservation: a pre-upgrade reservation-service snapshot was
-  inserted while its stored reservation total remained `800.000000`; applying
-  upgrade 008 left that stored total unchanged at `800.000000`.
+  inserted while its stored total remained accommodation-only; applying
+  upgrade 008 left both the stored total and snapshot rows unchanged.
+- Final-scenario repeatability: scenario 07 was reapplied over the clean final
+  state and the transactional lifecycle assertions passed again.
 - Precision: the assertions exercise non-cent totals, payment storage, paid
   amount, and balance values at six decimals, including a payment differing
   from its balance by `0.000001`. The residual `0.000001` remains visible,
   proving that the settlement tolerance does not round calculations to cents.
 
-## Backward compatibility
+## Compatibility and progressive history
 
 - Earlier learning-stage source files remain unchanged.
-- Existing five-argument `create_reservation` calls remain valid.
-- Existing seven-argument `process_booking` calls retain accommodation-only,
-  full-payment behavior.
-- Both existing `add_services_to_reservation` signatures remain callable and
-  continue returning `VOID`.
-- The ARRAY representation continues to turn repeated IDs into quantity.
-- The one intentional behavior change is normalized collection semantics in
-  the final installed state: `NULL` becomes a no-op and an empty collection
-  becomes an explicit clear for both legacy service overloads.
+- Existing five- and six-argument `create_reservation` call shapes remain valid
+  as public unpaid creation paths, but delegate to `initialize_reservation`.
+- Existing seven- and eight-argument paid call shapes retain their argument
+  order under the clearer `create_reservation` name.
+- `process_booking` and both `add_services_to_reservation` overloads are absent
+  from the final installed API. Their earlier scenario files are unchanged.
+- Canonical service input retains `NULL` as no change and `[]` as explicit clear.
 - Existing reservation-service snapshots and payment rows are not rewritten by
   the upgrade. Existing reservation totals will be recalculated only when the
   new domain operations modify that reservation; the upgrade will not perform

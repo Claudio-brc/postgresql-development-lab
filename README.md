@@ -131,10 +131,12 @@ not rounded to two decimals before comparison.
 
 Use `replace_reservation_services` as the supported service write path. It
 updates the persisted reservation total while preserving prior payment rows.
-`process_reservation_payment` settles a complete positive balance, and the
-service-aware overloads of `create_reservation` and `process_booking` accept a
-JSONB service collection. Existing signatures remain available as
-compatibility wrappers.
+`initialize_reservation` creates a validated `PENDING` reservation with its
+complete total. Public `create_reservation` optionally accepts services and a
+full settlement payment, delegating payment handling to
+`process_reservation_payment`. Scenario 07 removes the obsolete
+`process_booking` and `add_services_to_reservation` final API names while
+preserving their earlier teaching definitions in the scenario history.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for

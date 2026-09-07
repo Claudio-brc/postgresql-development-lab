@@ -45,9 +45,9 @@ The JSONB shape is:
 ```
 
 `NULL` leaves services and the persisted total unchanged. `[]` explicitly
-clears services and recalculates the accommodation-only total. Both legacy
-`add_services_to_reservation` overloads delegate to this operation; repeated
-IDs in the ARRAY form are consolidated, while the JSONB form rejects them.
+clears services and recalculates the accommodation-only total. The earlier
+`add_services_to_reservation` teaching overloads are removed from the final
+API; callers use this canonical JSONB operation directly.
 
 Service changes are allowed for `PENDING` and `CONFIRMED` reservations through
 checkout day. They are rejected for `CANCELLED` reservations and after
@@ -55,18 +55,23 @@ checkout. Existing snapshots do not follow later catalog price changes.
 
 ## Creation and payment
 
-`create_reservation(..., BIGINT, JSONB)` accepts optional services. The
-five-argument signature remains as an accommodation-only compatibility
-wrapper.
+`initialize_reservation` owns validation and `PENDING` creation. Its five-
+argument form creates an accommodation-only reservation; its six-argument
+form accepts the optional JSONB services collection and persists the complete
+accommodation-plus-snapshot total.
 
 `process_reservation_payment(BIGINT, NUMERIC, VARCHAR)` locks an existing
 reservation, requires the complete positive balance within the settlement
 tolerance, stores a six-decimal `PAID` payment, and confirms a `PENDING`
 reservation. It returns the new payment ID. It does not change old payments.
 
-`process_booking(..., BIGINT, JSONB)` combines service-aware creation and
-payment. The existing seven-argument signature remains available and passes
-`NULL` services.
+`create_reservation` is the public creation operation. Its five- and six-
+argument forms initialize without payment and return a `PENDING` reservation.
+Its seven- and eight-argument forms retain the former `process_booking`
+parameter order, optionally include services, settle the complete balance, and
+return a `CONFIRMED` reservation. Payment amount and method must either both be
+`NULL` or both be supplied. The obsolete `process_booking` name is removed in
+this final scenario.
 
 Payments may settle an existing balance after checkout, but cancelled
 reservations reject payments. Domain functions are the supported write path;

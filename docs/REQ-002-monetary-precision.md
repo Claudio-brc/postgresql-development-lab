@@ -104,10 +104,13 @@ they do not reduce scale before the final result is produced. The reservation
 creation flow stores the resulting value in
 `reservations.total_amount NUMERIC(16,6)`.
 
-`process_booking` accepts `p_payment_amount NUMERIC`, compares it with the
-reservation total in PostgreSQL, and stores it in
+At the REQ-002 evolution point, `process_booking` accepts
+`p_payment_amount NUMERIC`, compares it with the reservation total in
+PostgreSQL, and stores it in
 `payments.payment_amount NUMERIC(16,6)`. Its existing `0.01` payment-match
 tolerance remains unchanged to preserve established business behavior.
+Scenario 07 later moves this paid workflow under the public
+`create_reservation` name without changing these precision rules.
 
 Service-assignment functions continue to read `services.price` and snapshot it
 in `reservation_services.unit_price`. Their unconstrained `NUMERIC`

@@ -64,7 +64,7 @@ SELECT update_property_metadata(
 SELECT update_property_parking(1, FALSE);
 
 --------------------------------------------------------------------------------
--- Function: add_services_to_reservation()
+-- Function: replace_reservation_services()
 --
 -- Description:
 --   Replaces the services associated with a reservation using a JSONB array
@@ -76,12 +76,12 @@ SELECT update_property_parking(1, FALSE);
 --                             contain a service_id and quantity.
 --
 -- Returns:
---   No value.
+--   The reservation's total, paid amount, and balance.
 --   Raises an exception if the reservation does not exist, the JSON document
 --   is invalid, any specified service does not exist, or a service is repeated.
 --------------------------------------------------------------------------------
 
-SELECT add_services_to_reservation(
+SELECT * FROM replace_reservation_services(
     1,
     '[
         {

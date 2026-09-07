@@ -2175,64 +2175,22 @@ $$;
 
 
 ------------------------------------------------------------
--- Source: 05_evolve_add_services_to_reservation.sql
+-- Source: 05_remove_obsolete_service_wrappers.sql
 ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION add_services_to_reservation(
-    p_reservation_id BIGINT,
-    p_service_ids    BIGINT[]
-)
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-DECLARE
-    v_services JSONB;
-BEGIN
-    IF p_service_ids IS NULL THEN
-        PERFORM replace_reservation_services(p_reservation_id, NULL);
-        RETURN;
-    END IF;
-
-    SELECT COALESCE(
-        jsonb_agg(
-            jsonb_build_object(
-                'service_id', grouped.service_id,
-                'quantity', grouped.quantity
-            )
-            ORDER BY grouped.service_id
-        ),
-        '[]'::JSONB
-    )
-    INTO v_services
-    FROM (
-        SELECT item.service_id, COUNT(*)::INTEGER AS quantity
-        FROM unnest(p_service_ids) AS item(service_id)
-        GROUP BY item.service_id
-    ) AS grouped;
-
-    PERFORM replace_reservation_services(p_reservation_id, v_services);
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION add_services_to_reservation(
-    p_reservation_id BIGINT,
-    p_services       JSONB
-)
-RETURNS VOID
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    PERFORM replace_reservation_services(p_reservation_id, p_services);
-END;
-$$;
+-- Scenarios 05 and 06 retain these names to show the evolution from ARRAY to
+-- JSONB input. In the final API, service replacement has one canonical entry
+-- point with explicit collection semantics and an economic-state result.
+DROP FUNCTION IF EXISTS add_services_to_reservation(BIGINT, BIGINT[]);
+DROP FUNCTION IF EXISTS add_services_to_reservation(BIGINT, JSONB);
 
 
 
 ------------------------------------------------------------
--- Source: 06_evolve_create_reservation.sql
+-- Source: 06_initialize_reservation.sql
 ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION create_reservation(
+CREATE OR REPLACE FUNCTION initialize_reservation(
     p_guest_id          BIGINT,
     p_property_id       BIGINT,
     p_check_in          DATE,
@@ -2296,7 +2254,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION create_reservation(
+CREATE OR REPLACE FUNCTION initialize_reservation(
     p_guest_id          BIGINT,
     p_property_id       BIGINT,
     p_check_in          DATE,
@@ -2307,7 +2265,7 @@ RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    RETURN create_reservation(
+    RETURN initialize_reservation(
         p_guest_id,
         p_property_id,
         p_check_in,
@@ -2402,10 +2360,12 @@ $$;
 
 
 ------------------------------------------------------------
--- Source: 08_evolve_process_booking.sql
+-- Source: 08_create_reservation.sql
 ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION process_booking(
+-- The eight-argument form is the canonical implementation. Payment is absent
+-- only when both payment fields are NULL; incomplete payment input is rejected.
+CREATE OR REPLACE FUNCTION create_reservation(
     p_guest_id          BIGINT,
     p_property_id       BIGINT,
     p_check_in          DATE,
@@ -2421,7 +2381,7 @@ AS $$
 DECLARE
     v_reservation_id BIGINT;
 BEGIN
-    v_reservation_id := create_reservation(
+    v_reservation_id := initialize_reservation(
         p_guest_id,
         p_property_id,
         p_check_in,
@@ -2429,6 +2389,14 @@ BEGIN
         p_created_by_user_id,
         p_services
     );
+
+    IF p_payment_amount IS NULL AND p_payment_method IS NULL THEN
+        RETURN v_reservation_id;
+    END IF;
+
+    IF p_payment_amount IS NULL OR p_payment_method IS NULL THEN
+        RAISE EXCEPTION 'Payment amount and payment method must be supplied together.';
+    END IF;
 
     PERFORM process_reservation_payment(
         v_reservation_id,
@@ -2440,7 +2408,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION process_booking(
+CREATE OR REPLACE FUNCTION create_reservation(
     p_guest_id          BIGINT,
     p_property_id       BIGINT,
     p_check_in          DATE,
@@ -2453,7 +2421,7 @@ RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    RETURN process_booking(
+    RETURN create_reservation(
         p_guest_id,
         p_property_id,
         p_check_in,
@@ -2465,6 +2433,62 @@ BEGIN
     );
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION create_reservation(
+    p_guest_id          BIGINT,
+    p_property_id       BIGINT,
+    p_check_in          DATE,
+    p_check_out         DATE,
+    p_created_by_user_id BIGINT,
+    p_services          JSONB
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN create_reservation(
+        p_guest_id,
+        p_property_id,
+        p_check_in,
+        p_check_out,
+        NULL::NUMERIC,
+        NULL::VARCHAR(30),
+        p_created_by_user_id,
+        p_services
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION create_reservation(
+    p_guest_id          BIGINT,
+    p_property_id       BIGINT,
+    p_check_in          DATE,
+    p_check_out         DATE,
+    p_created_by_user_id BIGINT
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN create_reservation(
+        p_guest_id,
+        p_property_id,
+        p_check_in,
+        p_check_out,
+        p_created_by_user_id,
+        NULL::JSONB
+    );
+END;
+$$;
+
+-- The former name described workflow rather than domain intent. Scenario 02
+-- remains unchanged as history; only the final installed API removes it.
+DROP FUNCTION IF EXISTS process_booking(
+    BIGINT, BIGINT, DATE, DATE, NUMERIC, VARCHAR, BIGINT, JSONB
+);
+DROP FUNCTION IF EXISTS process_booking(
+    BIGINT, BIGINT, DATE, DATE, NUMERIC, VARCHAR, BIGINT
+);
 
 
 

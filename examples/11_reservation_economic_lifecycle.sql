@@ -10,12 +10,16 @@ DECLARE
     v_second_guest_id      BIGINT;
     v_third_guest_id       BIGINT;
     v_fourth_guest_id      BIGINT;
+    v_fifth_guest_id       BIGINT;
+    v_sixth_guest_id       BIGINT;
     v_property_id          BIGINT;
     v_second_property_id   BIGINT;
     v_service_id           BIGINT;
     v_other_service_id     BIGINT;
     v_reservation_id       BIGINT;
     v_second_reservation_id BIGINT;
+    v_pending_reservation_id BIGINT;
+    v_service_pending_id   BIGINT;
     v_payment_id           BIGINT;
     v_accommodation        NUMERIC(16,6);
     v_total                NUMERIC(16,6);
@@ -23,6 +27,8 @@ DECLARE
     v_balance              NUMERIC(16,6);
     v_old_payment          NUMERIC(16,6);
     v_rejected             BOOLEAN;
+    v_error_message        TEXT;
+    v_reservation_count    BIGINT;
 BEGIN
     SELECT user_id INTO STRICT v_user_id
     FROM users WHERE user_code = 'CALVAREZ';
@@ -43,6 +49,14 @@ BEGIN
     VALUES ('Economic Lifecycle Guest 4', 'economic-lifecycle-4@example.test')
     RETURNING guest_id INTO v_fourth_guest_id;
 
+    INSERT INTO guests (full_name, email)
+    VALUES ('Economic Lifecycle Guest 5', 'economic-lifecycle-5@example.test')
+    RETURNING guest_id INTO v_fifth_guest_id;
+
+    INSERT INTO guests (full_name, email)
+    VALUES ('Economic Lifecycle Guest 6', 'economic-lifecycle-6@example.test')
+    RETURNING guest_id INTO v_sixth_guest_id;
+
     INSERT INTO properties (property_name, nightly_rate, property_type)
     VALUES ('Precision Property', 10.123456, 'ROOM')
     RETURNING property_id INTO v_property_id;
@@ -59,24 +73,101 @@ BEGIN
     VALUES ('Other Precision Service', 'Six-decimal lifecycle test', 2.000001)
     RETURNING service_id INTO v_other_service_id;
 
-    v_reservation_id := create_reservation(
-        v_guest_id,
+    -- The lower-level domain operation remains directly usable when callers
+    -- explicitly need initialization semantics.
+    v_second_reservation_id := initialize_reservation(
+        v_second_guest_id,
+        v_second_property_id,
+        CURRENT_DATE + 40,
+        CURRENT_DATE + 42,
+        v_user_id
+    );
+    v_accommodation := calculate_booking_total(
+        v_second_property_id,
+        CURRENT_DATE + 40,
+        CURRENT_DATE + 42
+    )::NUMERIC(16,6);
+    IF (SELECT status FROM reservations
+        WHERE reservation_id = v_second_reservation_id) <> 'PENDING'
+       OR (SELECT total_amount FROM reservations
+           WHERE reservation_id = v_second_reservation_id) <> v_accommodation THEN
+        RAISE EXCEPTION 'Direct reservation initialization is incorrect';
+    END IF;
+
+    -- Public creation without services or payment leaves a complete
+    -- accommodation-only PENDING reservation.
+    v_pending_reservation_id := create_reservation(
+        v_third_guest_id,
         v_property_id,
-        CURRENT_DATE + 100,
-        CURRENT_DATE + 102,
+        CURRENT_DATE + 50,
+        CURRENT_DATE + 52,
+        v_user_id
+    );
+    v_accommodation := calculate_booking_total(
+        v_property_id,
+        CURRENT_DATE + 50,
+        CURRENT_DATE + 52
+    )::NUMERIC(16,6);
+    IF (SELECT status FROM reservations
+        WHERE reservation_id = v_pending_reservation_id) <> 'PENDING'
+       OR (SELECT total_amount FROM reservations
+           WHERE reservation_id = v_pending_reservation_id) <> v_accommodation
+       OR EXISTS (SELECT 1 FROM reservation_services
+                  WHERE reservation_id = v_pending_reservation_id)
+       OR EXISTS (SELECT 1 FROM payments
+                  WHERE reservation_id = v_pending_reservation_id) THEN
+        RAISE EXCEPTION 'Creation without services or payment is incorrect';
+    END IF;
+
+    -- Public creation with services but no payment also remains PENDING and
+    -- stores the full accommodation-plus-snapshot total.
+    v_service_pending_id := create_reservation(
+        v_fourth_guest_id,
+        v_property_id,
+        CURRENT_DATE + 60,
+        CURRENT_DATE + 62,
         v_user_id,
         jsonb_build_array(jsonb_build_object(
             'service_id', v_service_id,
-            'quantity', 3
+            'quantity', 2
         ))
     );
+    v_accommodation := calculate_booking_total(
+        v_property_id,
+        CURRENT_DATE + 60,
+        CURRENT_DATE + 62
+    )::NUMERIC(16,6);
+    v_total := (v_accommodation + 2 * 1.234567)::NUMERIC(16,6);
+    IF (SELECT status FROM reservations
+        WHERE reservation_id = v_service_pending_id) <> 'PENDING'
+       OR (SELECT total_amount FROM reservations
+           WHERE reservation_id = v_service_pending_id) <> v_total
+       OR calculate_reservation_balance(v_service_pending_id) <> v_total
+       OR EXISTS (SELECT 1 FROM payments
+                  WHERE reservation_id = v_service_pending_id) THEN
+        RAISE EXCEPTION 'Creation with services and no payment is incorrect';
+    END IF;
 
+    -- The paid public path initializes and settles atomically.
     v_accommodation := calculate_booking_total(
         v_property_id,
         CURRENT_DATE + 100,
         CURRENT_DATE + 102
     )::NUMERIC(16,6);
     v_total := (v_accommodation + 3 * 1.234567)::NUMERIC(16,6);
+    v_reservation_id := create_reservation(
+        v_guest_id,
+        v_property_id,
+        CURRENT_DATE + 100,
+        CURRENT_DATE + 102,
+        v_total,
+        '  CREDIT_CARD  ',
+        v_user_id,
+        jsonb_build_array(jsonb_build_object(
+            'service_id', v_service_id,
+            'quantity', 3
+        ))
+    );
 
     IF calculate_reservation_total(v_reservation_id) <> v_total
        OR (SELECT total_amount FROM reservations
@@ -85,14 +176,9 @@ BEGIN
         RAISE EXCEPTION 'Accommodation and service total lost six-decimal precision';
     END IF;
 
-    v_payment_id := process_reservation_payment(
-        v_reservation_id,
-        v_total,
-        '  CREDIT_CARD  '
-    );
-
-    SELECT payment_amount INTO v_old_payment
-    FROM payments WHERE payment_id = v_payment_id;
+    SELECT payment_id, payment_amount
+    INTO STRICT v_payment_id, v_old_payment
+    FROM payments WHERE reservation_id = v_reservation_id;
 
     IF v_old_payment <> v_total
        OR scale(v_old_payment) <> 6
@@ -145,7 +231,13 @@ BEGIN
         PERFORM process_reservation_payment(
             v_reservation_id, 0.000001, 'NO_BALANCE'
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> format(
+            'Reservation %s has no positive balance due.', v_reservation_id
+        ) THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -159,9 +251,12 @@ BEGIN
         RAISE EXCEPTION 'Catalog price changes must not alter existing snapshots';
     END IF;
 
-    PERFORM add_services_to_reservation(
+    PERFORM replace_reservation_services(
         v_reservation_id,
-        ARRAY[v_service_id, v_service_id, v_other_service_id]
+        jsonb_build_array(
+            jsonb_build_object('service_id', v_service_id, 'quantity', 2),
+            jsonb_build_object('service_id', v_other_service_id, 'quantity', 1)
+        )
     );
     IF (SELECT quantity FROM reservation_services
         WHERE reservation_id = v_reservation_id
@@ -169,16 +264,15 @@ BEGIN
        OR (SELECT unit_price FROM reservation_services
            WHERE reservation_id = v_reservation_id
              AND service_id = v_service_id) <> 9.876543 THEN
-        RAISE EXCEPTION 'ARRAY replacement did not consolidate IDs or refresh snapshots';
+        RAISE EXCEPTION 'Canonical replacement did not refresh service snapshots';
     END IF;
 
     v_total := (SELECT total_amount FROM reservations
                 WHERE reservation_id = v_reservation_id);
-    PERFORM add_services_to_reservation(v_reservation_id, NULL::BIGINT[]);
-    PERFORM add_services_to_reservation(v_reservation_id, NULL::JSONB);
+    PERFORM replace_reservation_services(v_reservation_id, NULL::JSONB);
     IF (SELECT total_amount FROM reservations
         WHERE reservation_id = v_reservation_id) <> v_total THEN
-        RAISE EXCEPTION 'NULL compatibility inputs must be no-ops';
+        RAISE EXCEPTION 'NULL service input must be a no-op';
     END IF;
 
     v_rejected := FALSE;
@@ -190,7 +284,11 @@ BEGIN
                 jsonb_build_object('service_id', v_service_id, 'quantity', 2)
             )
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'The service list contains repeated services.' THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -210,7 +308,11 @@ BEGIN
                 jsonb_build_object('service_id', -1, 'quantity', 1)
             )
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'Service identifier must be a positive integer.' THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected OR (SELECT total_amount FROM reservations
@@ -225,7 +327,6 @@ BEGIN
            WHERE reservation_id = v_reservation_id) <> v_accommodation THEN
         RAISE EXCEPTION 'Empty JSONB must clear services and restore accommodation total';
     END IF;
-    PERFORM add_services_to_reservation(v_reservation_id, ARRAY[]::BIGINT[]);
 
     v_second_reservation_id := create_reservation(
         v_second_guest_id,
@@ -248,7 +349,11 @@ BEGIN
     v_rejected := FALSE;
     BEGIN
         PERFORM replace_reservation_services(v_second_reservation_id, '[]'::JSONB);
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'Services cannot be changed after checkout.' THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -262,7 +367,14 @@ BEGIN
         PERFORM process_reservation_payment(
             v_second_reservation_id, 1.000001, 'CARD'
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> format(
+            'Cancelled reservation %s cannot receive payments.',
+            v_second_reservation_id
+        ) THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -276,7 +388,14 @@ BEGIN
                 'service_id', v_other_service_id, 'quantity', 1
             ))
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> format(
+            'Cancelled reservation %s cannot be changed.',
+            v_second_reservation_id
+        ) THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -290,7 +409,7 @@ BEGIN
             CURRENT_DATE + 302
         ) + (2 * 2.000001)
     )::NUMERIC(16,6);
-    v_reservation_id := process_booking(
+    v_reservation_id := create_reservation(
         v_third_guest_id,
         v_second_property_id,
         CURRENT_DATE + 300,
@@ -305,7 +424,7 @@ BEGIN
     IF calculate_reservation_balance(v_reservation_id) <> 0.000000
        OR (SELECT status FROM reservations
            WHERE reservation_id = v_reservation_id) <> 'CONFIRMED' THEN
-        RAISE EXCEPTION 'Service-aware process_booking did not complete atomically';
+        RAISE EXCEPTION 'Service-aware create_reservation did not settle atomically';
     END IF;
 
     v_total := calculate_booking_total(
@@ -313,7 +432,7 @@ BEGIN
         CURRENT_DATE + 400,
         CURRENT_DATE + 402
     )::NUMERIC(16,6);
-    v_reservation_id := process_booking(
+    v_reservation_id := create_reservation(
         v_fourth_guest_id,
         v_property_id,
         CURRENT_DATE + 400,
@@ -325,15 +444,89 @@ BEGIN
     IF calculate_reservation_balance(v_reservation_id) <> 0.000000
        OR EXISTS (SELECT 1 FROM reservation_services
                   WHERE reservation_id = v_reservation_id) THEN
-        RAISE EXCEPTION 'Legacy process_booking compatibility changed';
+        RAISE EXCEPTION 'Accommodation-only paid creation is incorrect';
     END IF;
 
-    IF to_regprocedure('create_reservation(bigint,bigint,date,date,bigint)') IS NULL
+    -- Rejected settlement rolls back initialization as part of the same call.
+    SELECT COUNT(*) INTO v_reservation_count FROM reservations;
+    v_total := calculate_booking_total(
+        v_property_id,
+        CURRENT_DATE + 500,
+        CURRENT_DATE + 502
+    )::NUMERIC(16,6);
+    v_rejected := FALSE;
+    BEGIN
+        PERFORM create_reservation(
+            v_fifth_guest_id,
+            v_property_id,
+            CURRENT_DATE + 500,
+            CURRENT_DATE + 502,
+            (v_total - 0.02)::NUMERIC(16,6),
+            'PARTIAL_PAYMENT',
+            v_user_id
+        );
+        RAISE EXCEPTION 'A partial payment was accepted';
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'Payment amount does not match the outstanding balance.' THEN
+            RAISE;
+        END IF;
+        v_rejected := TRUE;
+    END;
+    IF NOT v_rejected
+       OR (SELECT COUNT(*) FROM reservations) <> v_reservation_count THEN
+        RAISE EXCEPTION 'Partial-payment creation was not rejected atomically';
+    END IF;
+
+    v_total := (
+        calculate_booking_total(
+            v_second_property_id,
+            CURRENT_DATE + 600,
+            CURRENT_DATE + 602
+        ) + 2.000001
+    )::NUMERIC(16,6);
+    v_rejected := FALSE;
+    BEGIN
+        PERFORM create_reservation(
+            v_sixth_guest_id,
+            v_second_property_id,
+            CURRENT_DATE + 600,
+            CURRENT_DATE + 602,
+            (v_total + 0.02)::NUMERIC(16,6),
+            'OVERPAYMENT',
+            v_user_id,
+            jsonb_build_array(jsonb_build_object(
+                'service_id', v_other_service_id,
+                'quantity', 1
+            ))
+        );
+        RAISE EXCEPTION 'An overpayment was accepted';
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'Payment amount does not match the outstanding balance.' THEN
+            RAISE;
+        END IF;
+        v_rejected := TRUE;
+    END;
+    IF NOT v_rejected
+       OR (SELECT COUNT(*) FROM reservations) <> v_reservation_count THEN
+        RAISE EXCEPTION 'Overpayment creation was not rejected atomically';
+    END IF;
+
+    IF to_regprocedure('initialize_reservation(bigint,bigint,date,date,bigint)') IS NULL
+       OR to_regprocedure('initialize_reservation(bigint,bigint,date,date,bigint,jsonb)') IS NULL
+       OR to_regprocedure('create_reservation(bigint,bigint,date,date,bigint)') IS NULL
        OR to_regprocedure('create_reservation(bigint,bigint,date,date,bigint,jsonb)') IS NULL
-       OR to_regprocedure('process_booking(bigint,bigint,date,date,numeric,character varying,bigint)') IS NULL
-       OR to_regprocedure('process_booking(bigint,bigint,date,date,numeric,character varying,bigint,jsonb)') IS NULL
+       OR to_regprocedure('create_reservation(bigint,bigint,date,date,numeric,character varying,bigint)') IS NULL
+       OR to_regprocedure('create_reservation(bigint,bigint,date,date,numeric,character varying,bigint,jsonb)') IS NULL
        OR to_regprocedure('process_reservation_payment(bigint,numeric,character varying)') IS NULL THEN
-        RAISE EXCEPTION 'A required legacy or evolved signature is missing';
+        RAISE EXCEPTION 'A required final creation signature is missing';
+    END IF;
+    IF to_regprocedure('process_booking(bigint,bigint,date,date,numeric,character varying,bigint)') IS NOT NULL
+       OR to_regprocedure('process_booking(bigint,bigint,date,date,numeric,character varying,bigint,jsonb)') IS NOT NULL
+       OR to_regprocedure('add_services_to_reservation(bigint,bigint[])') IS NOT NULL
+       OR to_regprocedure('add_services_to_reservation(bigint,jsonb)') IS NOT NULL THEN
+        RAISE EXCEPTION 'An obsolete booking or service wrapper remains installed';
     END IF;
 
     -- This value differs from the balance below the 0.01 settlement tolerance
@@ -351,7 +544,11 @@ BEGIN
         PERFORM process_reservation_payment(
             v_second_reservation_id, v_balance, '   '
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'Payment method cannot be blank.' THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -373,7 +570,11 @@ BEGIN
         PERFORM process_reservation_payment(
             v_second_reservation_id, 0.010001, 'OVERPAY'
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> 'Payment amount does not match the outstanding balance.' THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
@@ -390,7 +591,11 @@ BEGIN
                 'service_id', v_other_service_id, 'quantity', 1
             ))
         );
-    EXCEPTION WHEN OTHERS THEN
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> format('Service %s is inactive.', v_other_service_id) THEN
+            RAISE;
+        END IF;
         v_rejected := TRUE;
     END;
     IF NOT v_rejected THEN
