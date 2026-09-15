@@ -64,6 +64,8 @@ accommodation-plus-snapshot total.
 reservation, requires the complete positive balance within the settlement
 tolerance, stores a six-decimal `PAID` payment, and confirms a `PENDING`
 reservation. It returns the new payment ID. It does not change old payments.
+This describes the scenario-07 evolution point; scenario 08 subsequently
+redefines payment processing to accept partial payments and rate snapshots.
 
 `create_reservation` is the public creation operation. Its five- and six-
 argument forms initialize without payment and return a `PENDING` reservation.

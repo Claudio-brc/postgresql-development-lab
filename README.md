@@ -84,6 +84,7 @@ schema/upgrades/005_add_guest_documents.sql
 schema/upgrades/006_add_application_users.sql
 schema/upgrades/007_increase_monetary_precision.sql
 schema/upgrades/008_reservation_economic_lifecycle.sql
+schema/upgrades/009_currencies_and_partial_payments.sql
 ```
 
 Because historical rows have no reliable type information, the upgrade assigns
@@ -133,10 +134,16 @@ Use `replace_reservation_services` as the supported service write path. It
 updates the persisted reservation total while preserving prior payment rows.
 `initialize_reservation` creates a validated `PENDING` reservation with its
 complete total. Public `create_reservation` optionally accepts services and a
-full settlement payment, delegating payment handling to
+payment, delegating partial or final settlement handling to
 `process_reservation_payment`. Scenario 07 removes the obsolete
 `process_booking` and `add_services_to_reservation` final API names while
 preserving their earlier teaching definitions in the scenario history.
+
+Currency and partial-payment behavior is verified by
+`examples/12_currencies_and_partial_payments.sql`. Reservation and payment
+exchange-rate snapshots retain ten-decimal precision, while converted monetary
+results keep the existing six-decimal precision. Each partial payment is an
+independent row and confirmation occurs only at settlement.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for

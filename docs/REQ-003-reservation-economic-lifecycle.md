@@ -2,6 +2,10 @@
 
 Status: implemented; creation API refactored and validated on 2026-09-04.
 
+REQ-004 subsequently evolves full-settlement-only processing into partial
+payments with currency and exchange-rate snapshots. This document preserves
+the REQ-003 evolution point and its original validation evidence.
+
 ## Objective
 
 Evolve the model, after reservation services and JSONB have been introduced, so

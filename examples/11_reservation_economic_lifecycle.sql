@@ -447,36 +447,29 @@ BEGIN
         RAISE EXCEPTION 'Accommodation-only paid creation is incorrect';
     END IF;
 
-    -- Rejected settlement rolls back initialization as part of the same call.
+    -- REQ-004 evolves this call shape to accept a partial initial payment.
     SELECT COUNT(*) INTO v_reservation_count FROM reservations;
     v_total := calculate_booking_total(
         v_property_id,
         CURRENT_DATE + 500,
         CURRENT_DATE + 502
     )::NUMERIC(16,6);
-    v_rejected := FALSE;
-    BEGIN
-        PERFORM create_reservation(
-            v_fifth_guest_id,
-            v_property_id,
-            CURRENT_DATE + 500,
-            CURRENT_DATE + 502,
-            (v_total - 0.02)::NUMERIC(16,6),
-            'PARTIAL_PAYMENT',
-            v_user_id
-        );
-        RAISE EXCEPTION 'A partial payment was accepted';
-    EXCEPTION WHEN raise_exception THEN
-        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
-        IF v_error_message <> 'Payment amount does not match the outstanding balance.' THEN
-            RAISE;
-        END IF;
-        v_rejected := TRUE;
-    END;
-    IF NOT v_rejected
-       OR (SELECT COUNT(*) FROM reservations) <> v_reservation_count THEN
-        RAISE EXCEPTION 'Partial-payment creation was not rejected atomically';
+    v_reservation_id := create_reservation(
+        v_fifth_guest_id,
+        v_property_id,
+        CURRENT_DATE + 500,
+        CURRENT_DATE + 502,
+        (v_total - 0.02)::NUMERIC(16,6),
+        'PARTIAL_PAYMENT',
+        v_user_id
+    );
+    IF calculate_reservation_balance(v_reservation_id) <> 0.020000
+       OR (SELECT status FROM reservations
+           WHERE reservation_id = v_reservation_id) <> 'PENDING'
+       OR (SELECT COUNT(*) FROM reservations) <> v_reservation_count + 1 THEN
+        RAISE EXCEPTION 'Partial-payment creation is incorrect';
     END IF;
+    v_reservation_count := v_reservation_count + 1;
 
     v_total := (
         calculate_booking_total(
@@ -503,7 +496,7 @@ BEGIN
         RAISE EXCEPTION 'An overpayment was accepted';
     EXCEPTION WHEN raise_exception THEN
         GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
-        IF v_error_message <> 'Payment amount does not match the outstanding balance.' THEN
+        IF v_error_message <> 'Payment amount exceeds the outstanding balance.' THEN
             RAISE;
         END IF;
         v_rejected := TRUE;
@@ -572,7 +565,7 @@ BEGIN
         );
     EXCEPTION WHEN raise_exception THEN
         GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
-        IF v_error_message <> 'Payment amount does not match the outstanding balance.' THEN
+        IF v_error_message <> 'Payment amount exceeds the outstanding balance.' THEN
             RAISE;
         END IF;
         v_rejected := TRUE;
