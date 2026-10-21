@@ -66,9 +66,17 @@ The canonical `initialize_reservation` adds `currency_code` and
 `exchange_rate` after the existing arguments. The canonical
 `create_reservation` adds reservation currency, reservation exchange rate, and
 payment exchange rate after its existing eight arguments. Convenience forms
-omit services and/or payment. Existing five-, six-, seven-, and eight-argument
-creation shapes remain supported as base-currency/rate-1 operations and all
-delegate to the canonical functions; business logic is not duplicated.
+omit payment or services where their signatures remain unambiguous. Existing
+five-, six-, seven-, and eight-argument creation shapes remain supported as
+base-currency/rate-1 operations and all delegate to the canonical functions;
+business logic is not duplicated.
+
+Explicit-currency unpaid creation uses the eight-argument form and passes
+`NULL::JSONB` when no services are required. A seven-argument explicit-currency
+form is intentionally not exposed: its `BIGINT, VARCHAR, NUMERIC` suffix would
+conflict with the legacy paid form's `NUMERIC, VARCHAR, BIGINT` suffix for
+integer-literal calls. Preserving unambiguous legacy calls takes precedence
+over that convenience overload.
 
 ## Schema and direct-write safeguards
 
@@ -87,7 +95,9 @@ existing value, adds nullable columns, backfills every historical reservation
 with the configured base currency/rate 1 and every historical payment with
 rate 1, and only then makes the columns mandatory. Amounts, statuses, service
 snapshots, payment rows, and timestamps are not rewritten. The upgrade uses
-the canonical scenario sources for function definitions and is repeatable.
+the canonical scenario sources for function definitions and is repeatable. It
+also removes the short-lived ambiguous seven-argument explicit-currency
+creation overload if that development version was installed previously.
 
 ## Traceability
 
@@ -99,6 +109,7 @@ the canonical scenario sources for function definitions and is repeatable.
 | Potential/collected base reporting | scenario 08 reporting functions | 450000 potential and 451500 collected assertions |
 | Partial payments and settlement | canonical payment function | 100 + 150 + 50 flow and status/balance assertions |
 | Overpayment rejection | canonical payment function | atomic 50.01 rejection at balance 50 |
+| Creation overload compatibility | legacy seven-argument paid form; explicit-currency eight-argument unpaid form | integer-literal legacy call and explicit-currency alternative |
 | Existing data preserved | upgrade 009 backfill | upgrade validation from version 008 |
 | Generated distribution | scenario installer and master installer | build plus clean-install validation |
 
@@ -117,4 +128,7 @@ completed transactionally. A second database loaded from the pre-change
 version-008 installer retained 10 reservations totaling 4860.000000 and 6
 payments totaling 3330.000000 after upgrade 009; every legacy snapshot was
 backfilled to ARS/rate 1. Example 12 passed after upgrade, and applying upgrade
-009 a second time also completed successfully.
+009 a second time also completed successfully. Regression coverage verifies
+that the legacy paid creation form accepts integer literals, explicit-currency
+unpaid creation uses the eight-argument form, and direct reservation/payment
+writes enforce the currency-rate invariants.

@@ -1,5 +1,12 @@
 -- Canonical creation accepts independent reservation-time and payment-time
 -- rate snapshots. All overloads delegate here or to another delegating form.
+-- Remove the short-lived seven-argument explicit-currency overload. Its
+-- BIGINT/VARCHAR/NUMERIC suffix conflicts with the legacy paid overload's
+-- NUMERIC/VARCHAR/BIGINT suffix when callers use integer literals.
+DROP FUNCTION IF EXISTS create_reservation(
+    BIGINT, BIGINT, DATE, DATE, BIGINT, VARCHAR, NUMERIC
+);
+
 CREATE OR REPLACE FUNCTION create_reservation(
     p_guest_id                  BIGINT,
     p_property_id               BIGINT,
@@ -74,7 +81,8 @@ BEGIN
 END;
 $$;
 
--- Explicit-currency unpaid creation, with or without services.
+-- Explicit-currency unpaid creation. Pass NULL::JSONB to omit services while
+-- retaining an unambiguous eight-argument call.
 CREATE OR REPLACE FUNCTION create_reservation(
     p_guest_id                  BIGINT,
     p_property_id               BIGINT,
@@ -93,27 +101,6 @@ BEGIN
         p_guest_id, p_property_id, p_check_in, p_check_out,
         NULL::NUMERIC, NULL::VARCHAR(30), p_created_by_user_id,
         p_services, p_currency_code, p_reservation_exchange_rate, NULL::NUMERIC
-    );
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION create_reservation(
-    p_guest_id                  BIGINT,
-    p_property_id               BIGINT,
-    p_check_in                  DATE,
-    p_check_out                 DATE,
-    p_created_by_user_id        BIGINT,
-    p_currency_code             VARCHAR(3),
-    p_reservation_exchange_rate NUMERIC
-)
-RETURNS BIGINT
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN create_reservation(
-        p_guest_id, p_property_id, p_check_in, p_check_out,
-        p_created_by_user_id, NULL::JSONB, p_currency_code,
-        p_reservation_exchange_rate
     );
 END;
 $$;

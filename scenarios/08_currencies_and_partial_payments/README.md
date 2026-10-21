@@ -19,6 +19,11 @@ mean base currency at rate 1. The legacy three-argument payment overload is
 valid only for base-currency reservations, because a new foreign-currency
 payment needs its own supplied snapshot.
 
+Explicit-currency unpaid creation uses the eight-argument `create_reservation`
+form; pass `NULL::JSONB` for its services argument when no services are needed.
+There is no seven-argument explicit-currency form because it would make legacy
+paid calls with integer literals ambiguous.
+
 Each successful payment is a separate `PAID` row. A positive balance at or
 above the `0.01` settlement tolerance remains `PENDING`; a balance within the
 tolerance becomes `CONFIRMED`. Overpayments at or beyond the tolerance are

@@ -10,7 +10,7 @@
     Name of the generated installation script.
 
 .EXAMPLE
-    .\build-install.ps1
+    .\build-all.ps1
 #>
 
 
