@@ -3,7 +3,7 @@ name: PostgreSQL CI
 on:
   push:
     branches:
-      - feature/reservation-creation-refactor
+      - master
 
   pull_request:
     branches:
