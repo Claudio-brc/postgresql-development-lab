@@ -92,27 +92,27 @@ SELECT get_reservation_summary(
 );
 
 --------------------------------------------------------------------------------
--- Function: add_services_to_reservation()
+-- Function: replace_reservation_services()
 --
 -- Description:
---   Replaces the services associated with a reservation using the provided
---   array of service IDs. Repeated IDs are consolidated and their number of
---   occurrences is stored as the service quantity.
+--   Replaces the services associated with a reservation using the canonical
+--   JSONB service collection.
 --
 -- Parameters:
 --   p_reservation_id BIGINT   - Reservation identifier.
---   p_service_ids BIGINT[]    - Array of service identifiers to associate with
---                               the reservation.
+--   p_services JSONB          - Service identifiers and explicit quantities.
 --
 -- Returns:
---   No value.
+--   The reservation's total, paid amount, and balance.
 --   Raises an exception if the reservation or any specified service does not
 --   exist.
 --------------------------------------------------------------------------------
 
-SELECT add_services_to_reservation(
+SELECT * FROM replace_reservation_services(
     1,
-    ARRAY[1, 1, 2, 3]
+    '[{"service_id": 1, "quantity": 2},
+      {"service_id": 2, "quantity": 1},
+      {"service_id": 3, "quantity": 1}]'::JSONB
 );
 
 

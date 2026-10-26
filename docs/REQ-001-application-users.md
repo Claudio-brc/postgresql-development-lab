@@ -97,7 +97,8 @@ already include the mandatory creator.
 
 ## Functions
 
-The final state contains a single signature for each affected function:
+At the REQ-001 evolution point, the state contains a single signature for each
+affected function:
 
 ```text
 create_reservation(BIGINT, BIGINT, DATE, DATE, BIGINT)
@@ -109,6 +110,10 @@ try_create_reservation_with_logging(BIGINT, BIGINT, DATE, DATE, BIGINT)
 `p_created_by_user_id` is mandatory, has no default value, and is
 propagated using the technical identifier `users.user_id`. No historical
 wrappers or overloads are retained.
+
+Scenario 07 later renames the lower-level creation responsibility to
+`initialize_reservation` and evolves the paid workflow into public
+`create_reservation`; the mandatory creator identifier remains unchanged.
 
 `try_create_reservation` translates a foreign key violation into an
 invalid guest, property, or user identifier error.

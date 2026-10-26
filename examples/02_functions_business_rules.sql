@@ -117,7 +117,7 @@ SELECT create_reservation(
 
 
 --------------------------------------------------------------------------------
--- Function: process_booking()
+-- Function: create_reservation() with payment
 --
 -- Description:
 --   Processes a complete booking by creating the reservation, validating the
@@ -138,7 +138,7 @@ SELECT create_reservation(
 --   validation fails.
 --------------------------------------------------------------------------------
 
-SELECT process_booking(
+SELECT create_reservation(
     1,
     1,
     DATE '2026-08-18',

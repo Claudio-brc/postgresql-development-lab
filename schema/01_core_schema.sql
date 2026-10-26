@@ -184,6 +184,14 @@ CREATE TABLE reservations (
                         DEFAULT 0
                         CHECK (total_amount >= 0),
 
+    currency_code       VARCHAR(3)
+                        NOT NULL
+                        CHECK (currency_code ~ '^[A-Z]{3}$'),
+
+    exchange_rate       NUMERIC(20,10)
+                        NOT NULL
+                        CHECK (exchange_rate > 0),
+
     created_at          TIMESTAMPTZ
                         NOT NULL
                         DEFAULT CURRENT_TIMESTAMP,
@@ -226,6 +234,10 @@ CREATE TABLE payments (
                         NOT NULL
                         CHECK (payment_amount > 0),
 
+    exchange_rate       NUMERIC(20,10)
+                        NOT NULL
+                        CHECK (exchange_rate > 0),
+
     payment_method      VARCHAR(30) NOT NULL,
 
     status              VARCHAR(20)
@@ -257,9 +269,113 @@ CREATE TABLE app_settings (
 
     setting_value   VARCHAR(255) NOT NULL,
 
-    description     VARCHAR(255)
+    description     VARCHAR(255),
+
+    CONSTRAINT chk_app_settings_base_currency_code
+        CHECK (
+            setting_key <> 'base_currency_code'
+            OR setting_value ~ '^[A-Z]{3}$'
+        )
 
 );
+
+CREATE OR REPLACE FUNCTION validate_currency_exchange_rate(
+    p_currency_code VARCHAR,
+    p_exchange_rate NUMERIC
+)
+RETURNS VARCHAR
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_currency_code VARCHAR(3);
+    v_base_currency_code VARCHAR(3);
+BEGIN
+    v_currency_code := UPPER(BTRIM(p_currency_code));
+
+    IF v_currency_code IS NULL OR v_currency_code !~ '^[A-Z]{3}$' THEN
+        RAISE EXCEPTION 'Currency code must be a three-letter ISO 4217 code.';
+    END IF;
+
+    IF p_exchange_rate IS NULL OR p_exchange_rate <= 0 THEN
+        RAISE EXCEPTION 'Exchange rate must be greater than zero.';
+    END IF;
+
+    SELECT setting_value
+    INTO v_base_currency_code
+    FROM app_settings
+    WHERE setting_key = 'base_currency_code';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Setting "base_currency_code" not found.';
+    END IF;
+
+    IF v_currency_code = v_base_currency_code AND p_exchange_rate <> 1 THEN
+        RAISE EXCEPTION 'Exchange rate must be 1 when the currency is the base currency (%).',
+            v_base_currency_code;
+    END IF;
+
+    RETURN v_currency_code;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION validate_reservation_currency_snapshot()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.currency_code IS NULL AND NEW.exchange_rate IS NULL THEN
+        SELECT setting_value, 1::NUMERIC(20,10)
+        INTO NEW.currency_code, NEW.exchange_rate
+        FROM app_settings
+        WHERE setting_key = 'base_currency_code';
+    END IF;
+
+    NEW.currency_code := validate_currency_exchange_rate(
+        NEW.currency_code,
+        NEW.exchange_rate
+    );
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_reservations_validate_currency_snapshot
+BEFORE INSERT OR UPDATE OF currency_code, exchange_rate ON reservations
+FOR EACH ROW
+EXECUTE FUNCTION validate_reservation_currency_snapshot();
+
+CREATE OR REPLACE FUNCTION validate_payment_exchange_rate()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_currency_code VARCHAR(3);
+BEGIN
+    SELECT r.currency_code
+    INTO v_currency_code
+    FROM reservations AS r
+    WHERE r.reservation_id = NEW.reservation_id;
+
+    IF NOT FOUND THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.exchange_rate IS NULL
+       AND v_currency_code = (
+           SELECT setting_value FROM app_settings
+           WHERE setting_key = 'base_currency_code'
+       ) THEN
+        NEW.exchange_rate := 1::NUMERIC(20,10);
+    END IF;
+
+    PERFORM validate_currency_exchange_rate(v_currency_code, NEW.exchange_rate);
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_payments_validate_exchange_rate
+BEFORE INSERT OR UPDATE OF reservation_id, exchange_rate ON payments
+FOR EACH ROW
+EXECUTE FUNCTION validate_payment_exchange_rate();
 
 CREATE TABLE discounts (
 

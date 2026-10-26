@@ -84,7 +84,19 @@ schema/upgrades/005_add_guest_documents.sql
 schema/upgrades/006_add_application_users.sql
 schema/upgrades/007_increase_monetary_precision.sql
 schema/upgrades/008_reservation_economic_lifecycle.sql
+schema/upgrades/009_currencies_and_partial_payments.sql
 ```
+
+Upgrade 009 includes `psql` `\ir` commands and must be executed by `psql`.
+From the repository root, run it with error-stop behavior enabled:
+
+```powershell
+psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
+  -f schema/upgrades/009_currencies_and_partial_payments.sql
+```
+
+Supply the appropriate `-h` and `-U` options for your environment. Do not run
+upgrade 009 through a client that does not support `psql` meta-commands.
 
 Because historical rows have no reliable type information, the upgrade assigns
 `ROOM` as a transitional value. Review and correct those rows after applying it.
@@ -109,7 +121,8 @@ examples/
 ├── 08_guest_soft_delete.sql
 ├── 09_guest_documents.sql
 ├── 10_application_users.sql
-└── 11_reservation_economic_lifecycle.sql
+├── 11_reservation_economic_lifecycle.sql
+└── 12_currencies_and_partial_payments.sql
 ```
 
 Guest soft-delete behavior and reservation-history preservation are verified by
@@ -131,10 +144,18 @@ not rounded to two decimals before comparison.
 
 Use `replace_reservation_services` as the supported service write path. It
 updates the persisted reservation total while preserving prior payment rows.
-`process_reservation_payment` settles a complete positive balance, and the
-service-aware overloads of `create_reservation` and `process_booking` accept a
-JSONB service collection. Existing signatures remain available as
-compatibility wrappers.
+`initialize_reservation` creates a validated `PENDING` reservation with its
+complete total. Public `create_reservation` optionally accepts services and a
+payment, delegating partial or final settlement handling to
+`process_reservation_payment`. Scenario 07 removes the obsolete
+`process_booking` and `add_services_to_reservation` final API names while
+preserving their earlier teaching definitions in the scenario history.
+
+Currency and partial-payment behavior is verified by
+`examples/12_currencies_and_partial_payments.sql`. Reservation and payment
+exchange-rate snapshots retain ten-decimal precision, while converted monetary
+results keep the existing six-decimal precision. Each partial payment is an
+independent row and confirmation occurs only at settlement.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for
@@ -227,7 +248,8 @@ Examples of:
 ├── docs
 │ ├── REQ-001-application-users.md
 │ ├── REQ-002-monetary-precision.md
-│ └── REQ-003-reservation-economic-lifecycle.md
+│ ├── REQ-003-reservation-economic-lifecycle.md
+│ └── REQ-004-currencies-and-partial-payments.md
 │
 ├── examples
 │ ├── 01_plpgsql_fundamentals.sql
@@ -240,7 +262,8 @@ Examples of:
 │ ├── 08_guest_soft_delete.sql
 │ ├── 09_guest_documents.sql
 │ ├── 10_application_users.sql
-│ └── 11_reservation_economic_lifecycle.sql
+│ ├── 11_reservation_economic_lifecycle.sql
+│ └── 12_currencies_and_partial_payments.sql
 │
 ├── install
 │ ├── 01_plpgsql_fundamentals.sql
@@ -250,6 +273,7 @@ Examples of:
 │ ├── 05_advanced_types.sql
 │ ├── 06_jsonb.sql
 │ ├── 07_reservation_economic_lifecycle.sql
+│ ├── 08_currencies_and_partial_payments.sql
 │ └── postgresql-development-lab.sql
 │
 ├── schema
@@ -264,7 +288,8 @@ Examples of:
 │     ├── 005_add_guest_documents.sql
 │     ├── 006_add_application_users.sql
 │     ├── 007_increase_monetary_precision.sql
-│     └── 008_reservation_economic_lifecycle.sql
+│     ├── 008_reservation_economic_lifecycle.sql
+│     └── 009_currencies_and_partial_payments.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals
@@ -273,7 +298,8 @@ Examples of:
 │ ├── 04_error_handling_and_logging
 │ ├── 05_advanced_types
 │ ├── 06_jsonb
-│ └── 07_reservation_economic_lifecycle
+│ ├── 07_reservation_economic_lifecycle
+│ └── 08_currencies_and_partial_payments
 │
 ├── tools
 │ ├── build-all.ps1
@@ -300,6 +326,7 @@ Examples of:
 | Advanced Types | ✅ |
 | JSONB | ✅ |
 | Reservation Economic Lifecycle | ✅ |
+| Currencies and Partial Payments | ✅ |
 
 
 ---

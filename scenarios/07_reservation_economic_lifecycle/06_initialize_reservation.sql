@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION create_reservation(
+CREATE OR REPLACE FUNCTION initialize_reservation(
     p_guest_id          BIGINT,
     p_property_id       BIGINT,
     p_check_in          DATE,
@@ -62,7 +62,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION create_reservation(
+CREATE OR REPLACE FUNCTION initialize_reservation(
     p_guest_id          BIGINT,
     p_property_id       BIGINT,
     p_check_in          DATE,
@@ -73,7 +73,7 @@ RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    RETURN create_reservation(
+    RETURN initialize_reservation(
         p_guest_id,
         p_property_id,
         p_check_in,

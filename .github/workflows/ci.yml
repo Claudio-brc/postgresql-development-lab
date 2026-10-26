@@ -1,0 +1,61 @@
+name: PostgreSQL CI
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+jobs:
+  test:
+    name: Test PostgreSQL
+    runs-on: ubuntu-latest      
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgresql_development_lab
+        ports:
+          - 5432:5432   
+        options: >-
+            --health-cmd "pg_isready -U postgres -d postgresql_development_lab"
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5         
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4          
+      - name: Check PostgreSQL connection
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d postgresql_development_lab -c "SELECT version();"  
+      - name: Install PDL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f install/postgresql-development-lab.sql
+      - name: Run regression tests
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f examples/11_reservation_economic_lifecycle.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f examples/12_currencies_and_partial_payments.sql  

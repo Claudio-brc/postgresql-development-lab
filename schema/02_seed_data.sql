@@ -34,6 +34,15 @@ VALUES
 ('Family Cabin', 160.00, 'CABIN'),
 ('Luxury Suite', 300.00, 'ROOM');
 
+INSERT INTO app_settings
+(setting_key, setting_value, description)
+VALUES
+('base_currency_code', 'ARS', 'Currency used for consolidated financial reporting'),
+('weekly_discount_percent', '10', 'Discount applied to weekly stays'),
+('weekly_discount_nights', '7', 'Minimum nights to apply weekly discount'),
+('max_pending_reservations', '3', 'Maximum pending reservations per guest'),
+('max_stay_nights', '30', 'Maximum allowed stay');
+
 INSERT INTO reservations (
     guest_id,
     property_id,
@@ -41,6 +50,8 @@ INSERT INTO reservations (
     check_out_date,
     status,
     total_amount,
+    currency_code,
+    exchange_rate,
     created_by_user_id
 )
 SELECT
@@ -50,6 +61,8 @@ SELECT
     seed_reservation.check_out_date,
     seed_reservation.status,
     seed_reservation.total_amount,
+    'ARS',
+    1,
     users.user_id
 FROM (
     VALUES
@@ -78,27 +91,17 @@ JOIN users
 INSERT INTO payments (
     reservation_id,
     payment_amount,
+    exchange_rate,
     payment_method,
     status
 )
 VALUES
-(1,480.00,'CREDIT_CARD','PAID'),
-(2,750.00,'BANK_TRANSFER','PAID'),
-(4,550.00,'DEBIT_CARD','PAID'),
-(6,600.00,'BANK_TRANSFER','PAID'),
-(8,150.00,'CREDIT_CARD','PAID'),
-(9,800.00,'BANK_TRANSFER','PAID');
-
-INSERT INTO app_settings
-(setting_key, setting_value, description)
-VALUES
-('weekly_discount_percent', '10', 'Discount applied to weekly stays'),
-
-('weekly_discount_nights', '7', 'Minimum nights to apply weekly discount'),
-
-('max_pending_reservations', '3', 'Maximum pending reservations per guest'),
-
-('max_stay_nights', '30', 'Maximum allowed stay');
+(1,480.00,1,'CREDIT_CARD','PAID'),
+(2,750.00,1,'BANK_TRANSFER','PAID'),
+(4,550.00,1,'DEBIT_CARD','PAID'),
+(6,600.00,1,'BANK_TRANSFER','PAID'),
+(8,150.00,1,'CREDIT_CARD','PAID'),
+(9,800.00,1,'BANK_TRANSFER','PAID');
 
 INSERT INTO discounts
 (
