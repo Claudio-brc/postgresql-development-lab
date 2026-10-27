@@ -22,6 +22,7 @@ CREATE TABLE users (
     email         VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name     VARCHAR(100) NOT NULL,
+    role          VARCHAR(20) NOT NULL DEFAULT 'OPERATOR',
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ,
@@ -33,7 +34,10 @@ CREATE TABLE users (
         UNIQUE (email),
 
     CONSTRAINT chk_users_user_code_format
-        CHECK (user_code ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$')
+        CHECK (user_code ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$'),
+
+    CONSTRAINT chk_users_role
+        CHECK (role IN ('ADMIN', 'OPERATOR'))
 );
 
 

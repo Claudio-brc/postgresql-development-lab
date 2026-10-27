@@ -16,10 +16,11 @@ reservations.created_by_user_id
   → Booking API user who created the reservation
 ```
 
-Authentication, login, JWT, PostgreSQL-side password hashing, roles,
-permissions, sessions, refresh tokens, and a User ↔ Guest relationship
-are not included in this requirement. Booking API itself is also outside
-the scope of this change.
+Authentication, login, JWT, PostgreSQL-side password hashing, permissions,
+sessions, refresh tokens, and a User ↔ Guest relationship are not included in
+this requirement. Booking API itself is also outside the scope of this change.
+The later role extension is limited to storing either `ADMIN` or `OPERATOR`;
+authorization policy remains outside the database lab.
 
 ## `public.users` model
 
@@ -30,6 +31,7 @@ CREATE TABLE public.users (
     email         VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name     VARCHAR(100) NOT NULL,
+    role          VARCHAR(20) NOT NULL DEFAULT 'OPERATOR',
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ,
@@ -37,7 +39,9 @@ CREATE TABLE public.users (
     CONSTRAINT uq_users_user_code UNIQUE (user_code),
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT chk_users_user_code_format
-        CHECK (user_code ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$')
+        CHECK (user_code ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$'),
+    CONSTRAINT chk_users_role
+        CHECK (role IN ('ADMIN', 'OPERATOR'))
 );
 ```
 
@@ -45,6 +49,11 @@ CREATE TABLE public.users (
 produced by different hashing algorithms without coupling the schema to
 a specific one. PostgreSQL only stores the value after it has been
 processed by the application.
+
+`role` defaults to `OPERATOR`, preserving inserts that predate role support or
+intentionally omit the column. `ADMIN` and `OPERATOR` are the only accepted
+values, enforced by the named `chk_users_role` constraint. This is deliberately
+a constrained text column rather than an enum or a separate lookup table.
 
 ## Initial user
 
@@ -54,6 +63,7 @@ user:
 - `user_code = 'CALVAREZ'`;
 - `full_name = 'Claudio Alvarez'`;
 - `email = 'calvarez.brc@gmail.com'`;
+- `role = 'OPERATOR'`;
 - `is_active = TRUE`.
 
 The seed stores an explicitly fictitious placeholder in `password_hash`.
@@ -95,6 +105,11 @@ The upgrade runs inside a transaction and follows this order:
 A clean installation creates the final model directly, and its seeds
 already include the mandatory creator.
 
+Upgrade 010 adds `role` as nullable, backfills every existing user to
+`OPERATOR`, and only then applies the default, `NOT NULL`, and named check
+constraint. Reapplying the upgrade preserves existing role assignments and
+does not duplicate the constraint.
+
 ## Functions
 
 At the REQ-001 evolution point, the state contains a single signature for each
@@ -123,6 +138,7 @@ invalid guest, property, or user identifier error.
 - `schema/01_core_schema.sql`.
 - `schema/02_seed_data.sql`.
 - `schema/upgrades/006_add_application_users.sql`.
+- `schema/upgrades/010_add_user_roles.sql`.
 - `scenarios/02_functions_business_rules/05_create_reservation.sql`.
 - `scenarios/02_functions_business_rules/06_process_booking.sql`.
 - `scenarios/03_triggers_and_auditing/01_update_updated_at_trigger.sql`.
@@ -131,6 +147,7 @@ invalid guest, property, or user identifier error.
 - `examples/02_functions_business_rules.sql`.
 - `examples/08_guest_soft_delete.sql`.
 - `examples/10_application_users.sql`.
+- `tests/upgrades/010_add_user_roles.sql`.
 - `README.md`.
 
 Files under `install/` are regenerated exclusively through
@@ -152,7 +169,10 @@ Validation must verify:
 10. rejection of reservations without a creator or with a nonexistent
     `user_id`;
 11. exactly one active signature for each affected function;
-12. absence of compatibility wrappers.
+12. absence of compatibility wrappers;
+13. default and explicit role assignment;
+14. rejection of invalid and `NULL` roles;
+15. preservation of existing users and repeatability of upgrade 010.
 
 Clean installation and upgrade from the previous schema must be
 validated separately using disposable databases.

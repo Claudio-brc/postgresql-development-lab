@@ -52,10 +52,27 @@ jobs:
             -h localhost \
             -U postgres \
             -d postgresql_development_lab \
+            -f examples/10_application_users.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
             -f examples/11_reservation_economic_lifecycle.sql
 
           psql -X -v ON_ERROR_STOP=1 \
             -h localhost \
             -U postgres \
             -d postgresql_development_lab \
-            -f examples/12_currencies_and_partial_payments.sql  
+            -f examples/12_currencies_and_partial_payments.sql
+
+      - name: Test user-role upgrade
+        env:
+          PGPASSWORD: postgres
+        run: |
+          createdb -h localhost -U postgres pdl_user_roles_upgrade
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d pdl_user_roles_upgrade \
+            -f tests/upgrades/010_add_user_roles.sql
