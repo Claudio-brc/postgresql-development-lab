@@ -18,6 +18,7 @@ BEGIN
     WHERE user_code = 'CALVAREZ'
       AND full_name = 'Claudio Alvarez'
       AND email = 'calvarez.brc@gmail.com'
+      AND role = 'OPERATOR'
       AND is_active = TRUE;
 
     IF v_calvarez_user_id IS NULL THEN
@@ -45,6 +46,70 @@ BEGIN
     IF NOT (SELECT is_active FROM users WHERE user_id = v_test_user_id) THEN
         RAISE EXCEPTION 'A new application user must be active by default';
     END IF;
+
+    IF (SELECT role FROM users WHERE user_id = v_test_user_id) <> 'OPERATOR' THEN
+        RAISE EXCEPTION 'A new application user must be an OPERATOR by default';
+    END IF;
+
+    INSERT INTO users (user_code, email, password_hash, full_name, role)
+    VALUES (
+        'TEST-ADMIN',
+        'test-admin@example.test',
+        '$development-only$test-value',
+        'Administrator Example',
+        'ADMIN'
+    );
+
+    INSERT INTO users (user_code, email, password_hash, full_name, role)
+    VALUES (
+        'TEST-OPERATOR',
+        'test-operator@example.test',
+        '$development-only$test-value',
+        'Operator Example',
+        'OPERATOR'
+    );
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM users
+        WHERE user_code = 'TEST-ADMIN'
+          AND role = 'ADMIN'
+    ) OR NOT EXISTS (
+        SELECT 1
+        FROM users
+        WHERE user_code = 'TEST-OPERATOR'
+          AND role = 'OPERATOR'
+    ) THEN
+        RAISE EXCEPTION 'Explicit ADMIN and OPERATOR roles were not preserved';
+    END IF;
+
+    BEGIN
+        INSERT INTO users (user_code, email, password_hash, full_name, role)
+        VALUES (
+            'TEST-INVALID-ROLE',
+            'test-invalid-role@example.test',
+            '$development-only$test-value',
+            'Invalid Role Example',
+            'SUPERVISOR'
+        );
+        RAISE EXCEPTION 'An invalid application user role was accepted';
+    EXCEPTION
+        WHEN check_violation THEN NULL;
+    END;
+
+    BEGIN
+        INSERT INTO users (user_code, email, password_hash, full_name, role)
+        VALUES (
+            'TEST-NULL-ROLE',
+            'test-null-role@example.test',
+            '$development-only$test-value',
+            'Null Role Example',
+            NULL
+        );
+        RAISE EXCEPTION 'A NULL application user role was accepted';
+    EXCEPTION
+        WHEN not_null_violation THEN NULL;
+    END;
 
     IF (SELECT password_hash FROM users WHERE user_id = v_test_user_id)
         <> '$development-only$already-processed-test-value' THEN

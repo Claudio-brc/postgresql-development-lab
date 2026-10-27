@@ -85,6 +85,7 @@ schema/upgrades/006_add_application_users.sql
 schema/upgrades/007_increase_monetary_precision.sql
 schema/upgrades/008_reservation_economic_lifecycle.sql
 schema/upgrades/009_currencies_and_partial_payments.sql
+schema/upgrades/010_add_user_roles.sql
 ```
 
 Upgrade 009 includes `psql` `\ir` commands and must be executed by `psql`.
@@ -134,7 +135,13 @@ Guest document normalization, consistency, and uniqueness are verified by
 Application users and reservation creator ownership are verified by
 `examples/10_application_users.sql`. Every reservation must reference the
 application user that created it; `guest_id` continues to identify the person
-staying or holding the reservation.
+staying or holding the reservation. Application users have an `ADMIN` or
+`OPERATOR` role; omitted roles default to `OPERATOR`.
+
+Upgrade 010 preserves existing users, assigns them `OPERATOR`, and is safely
+repeatable. Its upgrade-specific regression fixture is
+`tests/upgrades/010_add_user_roles.sql` and must be run only in a disposable,
+empty database.
 
 The integrated accommodation, service-snapshot, and payment lifecycle is
 verified by `examples/11_reservation_economic_lifecycle.sql`. Reservation
@@ -289,7 +296,8 @@ Examples of:
 │     ├── 006_add_application_users.sql
 │     ├── 007_increase_monetary_precision.sql
 │     ├── 008_reservation_economic_lifecycle.sql
-│     └── 009_currencies_and_partial_payments.sql
+│     ├── 009_currencies_and_partial_payments.sql
+│     └── 010_add_user_roles.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals
@@ -304,6 +312,10 @@ Examples of:
 ├── tools
 │ ├── build-all.ps1
 │ └── build-scenarios.ps1
+│
+├── tests
+│ └── upgrades
+│   └── 010_add_user_roles.sql
 │
 ├── utils
 │ ├── get_setting.sql
