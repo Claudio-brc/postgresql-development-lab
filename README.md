@@ -86,18 +86,22 @@ schema/upgrades/007_increase_monetary_precision.sql
 schema/upgrades/008_reservation_economic_lifecycle.sql
 schema/upgrades/009_currencies_and_partial_payments.sql
 schema/upgrades/010_add_user_roles.sql
+schema/upgrades/011_reservation_cancellation.sql
 ```
 
-Upgrade 009 includes `psql` `\ir` commands and must be executed by `psql`.
-From the repository root, run it with error-stop behavior enabled:
+Upgrades 009 and 011 include `psql` `\ir` commands and must be executed by
+`psql`. From the repository root, run them with error-stop behavior enabled:
 
 ```powershell
 psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
   -f schema/upgrades/009_currencies_and_partial_payments.sql
+
+psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
+  -f schema/upgrades/011_reservation_cancellation.sql
 ```
 
 Supply the appropriate `-h` and `-U` options for your environment. Do not run
-upgrade 009 through a client that does not support `psql` meta-commands.
+upgrades 009 or 011 through a client that does not support `psql` meta-commands.
 
 Because historical rows have no reliable type information, the upgrade assigns
 `ROOM` as a transitional value. Review and correct those rows after applying it.
@@ -123,7 +127,8 @@ examples/
 ├── 09_guest_documents.sql
 ├── 10_application_users.sql
 ├── 11_reservation_economic_lifecycle.sql
-└── 12_currencies_and_partial_payments.sql
+├── 12_currencies_and_partial_payments.sql
+└── 13_reservation_confirmation_and_cancellation.sql
 ```
 
 Guest soft-delete behavior and reservation-history preservation are verified by
@@ -163,6 +168,12 @@ Currency and partial-payment behavior is verified by
 exchange-rate snapshots retain ten-decimal precision, while converted monetary
 results keep the existing six-decimal precision. Each partial payment is an
 independent row and confirmation occurs only at settlement.
+
+Final confirmation and cancellation behavior is verified by
+`examples/13_reservation_confirmation_and_cancellation.sql`. Confirmation
+requires a settled balance within the strict `0.01` tolerance; cancellation
+preserves payment history while the existing triggers maintain timestamps and
+the status audit trail.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for
@@ -256,7 +267,8 @@ Examples of:
 │ ├── REQ-001-application-users.md
 │ ├── REQ-002-monetary-precision.md
 │ ├── REQ-003-reservation-economic-lifecycle.md
-│ └── REQ-004-currencies-and-partial-payments.md
+│ ├── REQ-004-currencies-and-partial-payments.md
+│ └── REQ-005-reservation-confirmation-and-cancellation.md
 │
 ├── examples
 │ ├── 01_plpgsql_fundamentals.sql
@@ -270,7 +282,8 @@ Examples of:
 │ ├── 09_guest_documents.sql
 │ ├── 10_application_users.sql
 │ ├── 11_reservation_economic_lifecycle.sql
-│ └── 12_currencies_and_partial_payments.sql
+│ ├── 12_currencies_and_partial_payments.sql
+│ └── 13_reservation_confirmation_and_cancellation.sql
 │
 ├── install
 │ ├── 01_plpgsql_fundamentals.sql
@@ -297,7 +310,8 @@ Examples of:
 │     ├── 007_increase_monetary_precision.sql
 │     ├── 008_reservation_economic_lifecycle.sql
 │     ├── 009_currencies_and_partial_payments.sql
-│     └── 010_add_user_roles.sql
+│     ├── 010_add_user_roles.sql
+│     └── 011_reservation_cancellation.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals

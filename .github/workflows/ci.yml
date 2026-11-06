@@ -66,6 +66,28 @@ jobs:
             -d postgresql_development_lab \
             -f examples/12_currencies_and_partial_payments.sql
 
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f examples/13_reservation_confirmation_and_cancellation.sql
+
+      - name: Test reservation cancellation upgrade repeatability
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f schema/upgrades/011_reservation_cancellation.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f schema/upgrades/011_reservation_cancellation.sql
+
       - name: Test user-role upgrade
         env:
           PGPASSWORD: postgres
