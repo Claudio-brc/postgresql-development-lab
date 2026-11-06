@@ -78,3 +78,15 @@ this final scenario.
 Payments may settle an existing balance after checkout, but cancelled
 reservations reject payments. Domain functions are the supported write path;
 direct table writes do not automatically recalculate totals.
+
+## Final confirmation and cancellation rules
+
+Scenario 07 finally redefines the earlier teaching versions of
+`confirm_reservation` and `cancel_reservation` after the balance functions are
+available. Both operations lock the reservation row before validating it.
+
+Confirmation accepts only a `PENDING` reservation whose six-decimal balance is
+within the existing settlement tolerance (`ABS(balance) < 0.01`). Cancellation
+accepts `PENDING` and `CONFIRMED` reservations, is terminal, and never changes
+payment rows. The existing reservation triggers maintain `updated_at` and the
+status audit trail for both operations.
