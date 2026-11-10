@@ -1,6 +1,7 @@
 # REQ-005 — Reservation confirmation and cancellation
 
-Status: implemented on 2026-11-05.
+Status: implemented on 2026-11-05; check-out cancellation guard updated on
+2026-11-10.
 
 ## Objective
 
@@ -26,9 +27,13 @@ same transaction.
 ## Cancellation
 
 Cancellation locks the reservation row before checking status. It accepts
-`PENDING` and `CONFIRMED`, rejects an already `CANCELLED` reservation, and only
-changes the reservation status. Existing payments and exchange-rate snapshots
-are preserved. Refunds, penalties, and payment mutations are out of scope.
+`PENDING` reservations regardless of check-in or check-out dates, which keeps
+the operation usable by a future automatic expiration process. A `CONFIRMED`
+reservation can be cancelled only when `check_out_date >= CURRENT_DATE`; a
+confirmed stay whose check-out date is in the past is rejected. An already
+`CANCELLED` reservation is still rejected. Successful cancellation only changes
+the reservation status. Existing payments and exchange-rate snapshots are
+preserved. Refunds, penalties, and payment mutations are out of scope.
 
 The existing update and audit triggers continue to maintain
 `reservations.updated_at` and `reservation_status_audit`; the domain functions
@@ -50,9 +55,12 @@ common lock order remain subject to code review.
 
 ## Upgrade
 
-`schema/upgrades/011_reservation_cancellation.sql` replaces only the two
-function definitions by including their canonical scenario sources. It performs
-no table alteration or data modification and is safe to apply repeatedly after
-upgrade 010.
+`schema/upgrades/011_reservation_cancellation.sql` replaces the confirmation and
+cancellation definitions. The incremental
+`schema/upgrades/012_reservation_checkout_guard.sql` replaces only the canonical
+cancellation definition. Both include canonical scenario sources, perform no
+table alteration or data modification, and are safe to apply repeatedly in
+upgrade order.
 
-Automatic reservation expiration is explicitly outside this requirement.
+Automatic reservation expiration is explicitly outside this requirement; the
+date-independent `PENDING` cancellation rule keeps that future workflow viable.

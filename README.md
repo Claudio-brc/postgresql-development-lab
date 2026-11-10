@@ -87,9 +87,10 @@ schema/upgrades/008_reservation_economic_lifecycle.sql
 schema/upgrades/009_currencies_and_partial_payments.sql
 schema/upgrades/010_add_user_roles.sql
 schema/upgrades/011_reservation_cancellation.sql
+schema/upgrades/012_reservation_checkout_guard.sql
 ```
 
-Upgrades 009 and 011 include `psql` `\ir` commands and must be executed by
+Upgrades 009, 011, and 012 include `psql` `\ir` commands and must be executed by
 `psql`. From the repository root, run them with error-stop behavior enabled:
 
 ```powershell
@@ -98,10 +99,14 @@ psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
 
 psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
   -f schema/upgrades/011_reservation_cancellation.sql
+
+psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
+  -f schema/upgrades/012_reservation_checkout_guard.sql
 ```
 
 Supply the appropriate `-h` and `-U` options for your environment. Do not run
-upgrades 009 or 011 through a client that does not support `psql` meta-commands.
+upgrades 009, 011, or 012 through a client that does not support `psql`
+meta-commands.
 
 Because historical rows have no reliable type information, the upgrade assigns
 `ROOM` as a transitional value. Review and correct those rows after applying it.
@@ -172,8 +177,10 @@ independent row and confirmation occurs only at settlement.
 Final confirmation and cancellation behavior is verified by
 `examples/13_reservation_confirmation_and_cancellation.sql`. Confirmation
 requires a settled balance within the strict `0.01` tolerance; cancellation
-preserves payment history while the existing triggers maintain timestamps and
-the status audit trail.
+allows pending reservations regardless of dates, protects confirmed stays after
+checkout, and accepts confirmed cancellation through checkout day. It preserves
+payment history while the existing triggers maintain timestamps and the status
+audit trail.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for
@@ -311,7 +318,8 @@ Examples of:
 │     ├── 008_reservation_economic_lifecycle.sql
 │     ├── 009_currencies_and_partial_payments.sql
 │     ├── 010_add_user_roles.sql
-│     └── 011_reservation_cancellation.sql
+│     ├── 011_reservation_cancellation.sql
+│     └── 012_reservation_checkout_guard.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals

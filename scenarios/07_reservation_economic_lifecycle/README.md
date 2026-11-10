@@ -87,6 +87,8 @@ available. Both operations lock the reservation row before validating it.
 
 Confirmation accepts only a `PENDING` reservation whose six-decimal balance is
 within the existing settlement tolerance (`ABS(balance) < 0.01`). Cancellation
-accepts `PENDING` and `CONFIRMED` reservations, is terminal, and never changes
-payment rows. The existing reservation triggers maintain `updated_at` and the
-status audit trail for both operations.
+accepts `PENDING` reservations regardless of their dates. It accepts a
+`CONFIRMED` reservation only when its check-out date is today or in the future;
+past confirmed stays are protected from cancellation. Cancellation is terminal
+and never changes payment rows. The existing reservation triggers maintain
+`updated_at` and the status audit trail for both operations.
