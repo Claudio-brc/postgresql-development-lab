@@ -72,7 +72,7 @@ jobs:
             -d postgresql_development_lab \
             -f examples/13_reservation_confirmation_and_cancellation.sql
 
-      - name: Test reservation cancellation upgrade repeatability
+      - name: Test reservation cancellation upgrades
         env:
           PGPASSWORD: postgres
         run: |
@@ -87,6 +87,24 @@ jobs:
             -U postgres \
             -d postgresql_development_lab \
             -f schema/upgrades/011_reservation_cancellation.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f schema/upgrades/012_reservation_checkout_guard.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f schema/upgrades/012_reservation_checkout_guard.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f examples/13_reservation_confirmation_and_cancellation.sql
 
       - name: Test user-role upgrade
         env:

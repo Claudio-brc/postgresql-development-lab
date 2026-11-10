@@ -15,6 +15,9 @@ DECLARE
     v_exact_tolerance_id        BIGINT;
     v_within_tolerance_id       BIGINT;
     v_pending_cancellation_id   BIGINT;
+    v_past_pending_id           BIGINT;
+    v_past_confirmed_id         BIGINT;
+    v_today_confirmed_id        BIGINT;
     v_automatic_confirmation_id BIGINT;
     v_preserved_payment_id      BIGINT;
     v_payment_count             BIGINT;
@@ -257,6 +260,94 @@ BEGIN
            WHERE reservation_id = v_pending_cancellation_id)
             <= CURRENT_TIMESTAMP - INTERVAL '1 day' THEN
         RAISE EXCEPTION 'Pending cancellation did not update status metadata';
+    END IF;
+
+    INSERT INTO reservations (
+        guest_id, property_id, created_by_user_id,
+        check_in_date, check_out_date, status, total_amount,
+        currency_code, exchange_rate, updated_at
+    ) VALUES (
+        v_guest_id, v_property_id, v_user_id,
+        CURRENT_DATE - 4, CURRENT_DATE - 3, 'PENDING', 100.000000,
+        'ARS', 1.0000000000, CURRENT_TIMESTAMP - INTERVAL '1 day'
+    )
+    RETURNING reservation_id INTO v_past_pending_id;
+
+    PERFORM cancel_reservation(v_past_pending_id);
+
+    IF (SELECT status FROM reservations
+        WHERE reservation_id = v_past_pending_id) <> 'CANCELLED'
+       OR NOT EXISTS (
+           SELECT 1
+           FROM reservation_status_audit
+           WHERE reservation_id = v_past_pending_id
+             AND old_status = 'PENDING'
+             AND new_status = 'CANCELLED'
+       ) THEN
+        RAISE EXCEPTION 'A past pending reservation was not cancelled';
+    END IF;
+
+    INSERT INTO reservations (
+        guest_id, property_id, created_by_user_id,
+        check_in_date, check_out_date, status, total_amount,
+        currency_code, exchange_rate, updated_at
+    ) VALUES (
+        v_guest_id, v_property_id, v_user_id,
+        CURRENT_DATE - 2, CURRENT_DATE - 1, 'CONFIRMED', 100.000000,
+        'ARS', 1.0000000000, CURRENT_TIMESTAMP - INTERVAL '1 day'
+    )
+    RETURNING reservation_id INTO v_past_confirmed_id;
+
+    v_rejected := FALSE;
+    BEGIN
+        PERFORM cancel_reservation(v_past_confirmed_id);
+    EXCEPTION WHEN raise_exception THEN
+        GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+        IF v_error_message <> format(
+            'Confirmed reservation %s cannot be cancelled because its check-out date %s is in the past.',
+            v_past_confirmed_id,
+            CURRENT_DATE - 1
+        ) THEN
+            RAISE;
+        END IF;
+        v_rejected := TRUE;
+    END;
+
+    IF NOT v_rejected
+       OR (SELECT status FROM reservations
+           WHERE reservation_id = v_past_confirmed_id) <> 'CONFIRMED'
+       OR EXISTS (
+           SELECT 1
+           FROM reservation_status_audit
+           WHERE reservation_id = v_past_confirmed_id
+             AND new_status = 'CANCELLED'
+       ) THEN
+        RAISE EXCEPTION 'A past confirmed reservation was cancelled';
+    END IF;
+
+    INSERT INTO reservations (
+        guest_id, property_id, created_by_user_id,
+        check_in_date, check_out_date, status, total_amount,
+        currency_code, exchange_rate, updated_at
+    ) VALUES (
+        v_guest_id, v_property_id, v_user_id,
+        CURRENT_DATE - 1, CURRENT_DATE, 'CONFIRMED', 100.000000,
+        'ARS', 1.0000000000, CURRENT_TIMESTAMP - INTERVAL '1 day'
+    )
+    RETURNING reservation_id INTO v_today_confirmed_id;
+
+    PERFORM cancel_reservation(v_today_confirmed_id);
+
+    IF (SELECT status FROM reservations
+        WHERE reservation_id = v_today_confirmed_id) <> 'CANCELLED'
+       OR NOT EXISTS (
+           SELECT 1
+           FROM reservation_status_audit
+           WHERE reservation_id = v_today_confirmed_id
+             AND old_status = 'CONFIRMED'
+             AND new_status = 'CANCELLED'
+       ) THEN
+        RAISE EXCEPTION 'A confirmed reservation checking out today was not cancelled';
     END IF;
 
     SELECT COUNT(*) INTO v_payment_count
