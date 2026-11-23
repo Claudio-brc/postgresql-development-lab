@@ -72,6 +72,34 @@ jobs:
             -d postgresql_development_lab \
             -f examples/13_reservation_confirmation_and_cancellation.sql
 
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f examples/14_property_capacity.sql
+
+      - name: Test property-capacity upgrade
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f schema/upgrades/013_property_capacity.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f schema/upgrades/013_property_capacity.sql
+
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d postgresql_development_lab \
+            -f examples/14_property_capacity.sql
+
       - name: Test reservation cancellation upgrades
         env:
           PGPASSWORD: postgres
@@ -116,3 +144,14 @@ jobs:
             -U postgres \
             -d pdl_user_roles_upgrade \
             -f tests/upgrades/010_add_user_roles.sql
+
+      - name: Test property-capacity migration fixture
+        env:
+          PGPASSWORD: postgres
+        run: |
+          createdb -h localhost -U postgres pdl_property_capacity_upgrade
+          psql -X -v ON_ERROR_STOP=1 \
+            -h localhost \
+            -U postgres \
+            -d pdl_property_capacity_upgrade \
+            -f tests/upgrades/013_property_capacity.sql
