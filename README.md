@@ -88,9 +88,10 @@ schema/upgrades/009_currencies_and_partial_payments.sql
 schema/upgrades/010_add_user_roles.sql
 schema/upgrades/011_reservation_cancellation.sql
 schema/upgrades/012_reservation_checkout_guard.sql
+schema/upgrades/013_property_capacity.sql
 ```
 
-Upgrades 009, 011, and 012 include `psql` `\ir` commands and must be executed by
+Upgrades 009, 011, 012, and 013 include `psql` `\ir` commands and must be executed by
 `psql`. From the repository root, run them with error-stop behavior enabled:
 
 ```powershell
@@ -102,11 +103,21 @@ psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
 
 psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
   -f schema/upgrades/012_reservation_checkout_guard.sql
+
+psql -X -v ON_ERROR_STOP=1 -d postgresql_development_lab `
+  -f schema/upgrades/013_property_capacity.sql
 ```
 
 Supply the appropriate `-h` and `-U` options for your environment. Do not run
-upgrades 009, 011, or 012 through a client that does not support `psql`
+upgrades 009, 011, 012, or 013 through a client that does not support `psql`
 meta-commands.
+
+Upgrade 013 assigns `1` to historical `properties.max_guests` and
+`reservations.guests_count`. This is a conservative compatibility value, not
+verified historical occupancy. Configure each property's actual capacity after
+the upgrade. In pgAdmin Query Tool, `\ir` is not ordinary SQL; use the `psql`
+command above, or replace each `\ir` line with the complete referenced source
+file before executing the combined script.
 
 Because historical rows have no reliable type information, the upgrade assigns
 `ROOM` as a transitional value. Review and correct those rows after applying it.
@@ -133,7 +144,8 @@ examples/
 ├── 10_application_users.sql
 ├── 11_reservation_economic_lifecycle.sql
 ├── 12_currencies_and_partial_payments.sql
-└── 13_reservation_confirmation_and_cancellation.sql
+├── 13_reservation_confirmation_and_cancellation.sql
+└── 14_property_capacity.sql
 ```
 
 Guest soft-delete behavior and reservation-history preservation are verified by
@@ -181,6 +193,12 @@ allows pending reservations regardless of dates, protects confirmed stays after
 checkout, and accepts confirmed cancellation through checkout day. It preserves
 payment history while the existing triggers maintain timestamps and the status
 audit trail.
+
+Property capacity behavior is verified by `examples/14_property_capacity.sql`.
+`properties.max_guests` limits new occupancy and
+`reservations.guests_count` stores the declared booking value. Availability
+also checks activity and active date overlaps. Legacy availability and creation
+overloads use one guest, and guest count does not affect pricing.
 
 The initial development user is `CALVAREZ`. Its seeded `password_hash` is an
 explicit non-credential placeholder. Booking API/Auth is responsible for
@@ -275,7 +293,8 @@ Examples of:
 │ ├── REQ-002-monetary-precision.md
 │ ├── REQ-003-reservation-economic-lifecycle.md
 │ ├── REQ-004-currencies-and-partial-payments.md
-│ └── REQ-005-reservation-confirmation-and-cancellation.md
+│ ├── REQ-005-reservation-confirmation-and-cancellation.md
+│ └── REQ-006-property-capacity.md
 │
 ├── examples
 │ ├── 01_plpgsql_fundamentals.sql
@@ -290,7 +309,8 @@ Examples of:
 │ ├── 10_application_users.sql
 │ ├── 11_reservation_economic_lifecycle.sql
 │ ├── 12_currencies_and_partial_payments.sql
-│ └── 13_reservation_confirmation_and_cancellation.sql
+│ ├── 13_reservation_confirmation_and_cancellation.sql
+│ └── 14_property_capacity.sql
 │
 ├── install
 │ ├── 01_plpgsql_fundamentals.sql
@@ -301,6 +321,7 @@ Examples of:
 │ ├── 06_jsonb.sql
 │ ├── 07_reservation_economic_lifecycle.sql
 │ ├── 08_currencies_and_partial_payments.sql
+│ ├── 09_property_capacity.sql
 │ └── postgresql-development-lab.sql
 │
 ├── schema
@@ -319,7 +340,8 @@ Examples of:
 │     ├── 009_currencies_and_partial_payments.sql
 │     ├── 010_add_user_roles.sql
 │     ├── 011_reservation_cancellation.sql
-│     └── 012_reservation_checkout_guard.sql
+│     ├── 012_reservation_checkout_guard.sql
+│     └── 013_property_capacity.sql
 │
 ├── scenarios
 │ ├── 01_plpgsql_fundamentals
@@ -329,7 +351,8 @@ Examples of:
 │ ├── 05_advanced_types
 │ ├── 06_jsonb
 │ ├── 07_reservation_economic_lifecycle
-│ └── 08_currencies_and_partial_payments
+│ ├── 08_currencies_and_partial_payments
+│ └── 09_property_capacity
 │
 ├── tools
 │ ├── build-all.ps1
@@ -337,7 +360,8 @@ Examples of:
 │
 ├── tests
 │ └── upgrades
-│   └── 010_add_user_roles.sql
+│   ├── 010_add_user_roles.sql
+│   └── 013_property_capacity.sql
 │
 ├── utils
 │ ├── get_setting.sql
@@ -361,6 +385,7 @@ Examples of:
 | JSONB | ✅ |
 | Reservation Economic Lifecycle | ✅ |
 | Currencies and Partial Payments | ✅ |
+| Property Capacity | ✅ |
 
 
 ---

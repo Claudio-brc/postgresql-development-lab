@@ -103,13 +103,20 @@ CREATE TABLE properties (
                      NOT NULL
                      CHECK (nightly_rate >= 0),
 
+    max_guests      INTEGER
+                    NOT NULL
+                    DEFAULT 1,
+
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
 
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     updated_at      TIMESTAMPTZ,
 
-    metadata        JSONB  
+    metadata        JSONB,
+
+    CONSTRAINT chk_properties_max_guests
+        CHECK (max_guests > 0)
 );
 
 CREATE OR REPLACE FUNCTION set_property_code()
@@ -166,6 +173,10 @@ CREATE TABLE reservations (
 
     property_id         BIGINT NOT NULL,
 
+    guests_count        INTEGER
+                        NOT NULL
+                        DEFAULT 1,
+
     created_by_user_id  BIGINT NOT NULL,
 
     check_in_date       DATE NOT NULL,
@@ -215,8 +226,47 @@ CREATE TABLE reservations (
         REFERENCES users(user_id),
 
     CONSTRAINT chk_reservation_dates
-        CHECK (check_out_date > check_in_date)
+        CHECK (check_out_date > check_in_date),
+
+    CONSTRAINT chk_reservations_guests_count
+        CHECK (guests_count > 0)
 );
+
+CREATE OR REPLACE FUNCTION enforce_reservation_capacity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_max_guests INTEGER;
+BEGIN
+    SELECT p.max_guests
+    INTO v_max_guests
+    FROM properties AS p
+    WHERE p.property_id = NEW.property_id
+    FOR SHARE;
+
+    -- Let the foreign key report a missing property through its established
+    -- constraint path.
+    IF NOT FOUND THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.guests_count > v_max_guests THEN
+        RAISE EXCEPTION
+            'Guest count % exceeds maximum capacity % for property %.',
+            NEW.guests_count,
+            v_max_guests,
+            NEW.property_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_reservations_enforce_capacity
+BEFORE INSERT OR UPDATE OF property_id, guests_count ON reservations
+FOR EACH ROW
+EXECUTE FUNCTION enforce_reservation_capacity();
 
 ALTER TABLE reservations
 ADD CONSTRAINT exclude_overlapping_active_reservations
